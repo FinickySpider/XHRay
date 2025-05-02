@@ -71,7 +71,7 @@ coverage/
 .env.production.local
 
 # Package manager lock files (optional)
-# package-lock.json
+package-lock.json
 # yarn.lock
 # pnpm-lock.yaml
 # bun.lockb
@@ -222,3 +222,4 @@ uploads/*
 
 # Block Git hooks
 .husky/_/
+XHRay - Telemetry Correlator.js
