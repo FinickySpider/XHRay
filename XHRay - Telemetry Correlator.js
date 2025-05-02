@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         XHRay - Telemetry Correlator
 // @namespace    https://example.com/
-// @version      0.3.0
-// @description  Logs DOM events and network requests, correlates them, applies JSON rules for highlighting, live rule editor UI
+// @version      0.3.2
+// @description  Logs DOM events and network requests with highlighting and live JSON rule editor, conditional auto-scrolling UI
 // @match        *://*/*
 // @grant        GM_download
 // @grant        GM_getValue
@@ -33,6 +33,9 @@
   // Rolling logs
   let eventsLog = [];
   let requestsLog = [];
+
+  // Auto-scroll control
+  let autoScrollEnabled = true;
 
   // Utility: UUID v4
   function generateUUID() {
@@ -234,6 +237,13 @@
       borderRadius: '4px'
     });
     document.body.appendChild(panel);
+
+    // Pause/resume auto-scroll based on user scroll
+    panel.addEventListener('scroll', () => {
+      const atBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 5;
+      autoScrollEnabled = atBottom;
+    });
+
     addControlButtons(panel);
     renderRuleEditor(panel);
   }
@@ -247,6 +257,9 @@
       const el = formatEntryDOM(entry);
       panel.appendChild(el);
     });
+    if (autoScrollEnabled) {
+      panel.scrollTop = panel.scrollHeight;
+    }
   }
 
   function formatEntryDOM(entry) {
