@@ -1,0 +1,20 @@
+name: 🐞 Bug Report
+description: Report issues or unexpected behavior in XHRay
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What went wrong?
+      description: Describe the issue clearly.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Script version
+      placeholder: e.g. v0.2-pre1
+  - type: textarea
+    id: logs
+    attributes:
+      label: Console logs or screenshots
