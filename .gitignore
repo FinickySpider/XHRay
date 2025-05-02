@@ -223,3 +223,4 @@ uploads/*
 # Block Git hooks
 .husky/_/
 XHRay - Telemetry Correlator.js
+release-tag.bat
