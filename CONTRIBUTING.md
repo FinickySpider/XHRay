@@ -14,7 +14,7 @@ Please adhere to our [Code of Conduct](CODE_OF_CONDUCT.md) to ensure a welcoming
    ```bash
    git clone https://github.com/FinickySpider/XHRay.git
    cd XHRay
-````
+```
 
 2. **Install dependencies:**
 
