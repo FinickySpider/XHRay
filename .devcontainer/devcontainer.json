@@ -1,0 +1,11 @@
+{
+  "name": "XHRay Dev Container",
+  "dockerFile": "Dockerfile",
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+  "postCreateCommand": "npm install -g auto-changelog",
+  "forwardPorts": [],
+  "mounts": [],
+  "remoteUser": "node"
+}

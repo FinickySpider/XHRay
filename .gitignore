@@ -224,3 +224,5 @@ uploads/*
 .husky/_/
 XHRay - Telemetry Correlator.js
 release-tag.bat
+*.bat
+

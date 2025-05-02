@@ -88,5 +88,30 @@ if /I "%DOUPLOAD%"=="y" (
     echo ✅ GitHub Release API called
 )
 
+:: Update CHANGELOG.md header to match new version
+echo Updating CHANGELOG.md...
+
+set NEW_HEADER=## [%NEW_VERSION%] - %DATE%
+for /f "tokens=2-4 delims=/ " %%a in ('date /t') do (
+  set DATE=%%c-%%a-%%b
+)
+
+setlocal enabledelayedexpansion
+(
+    echo ## [%NEW_VERSION%] - !DATE!
+    echo.
+    echo ### Added
+    echo - TODO: Add feature descriptions here
+    echo.
+    echo ### Fixed
+    echo - TODO: Add bugfixes here
+    echo.
+    type CHANGELOG.md
+) > temp_changelog.md
+
+move /Y temp_changelog.md CHANGELOG.md >nul
+
+echo Running auto-changelog...
+bash ./scripts/generate-changelog.sh
 echo ✅ Release v%NEW_VERSION% complete.
 pause

@@ -1,4 +1,4 @@
-import { bootstrap } from './bootstrap.js';
+import { bootstrap } from './core/bootstrap.js';
 
 (function () {
   'use strict';
