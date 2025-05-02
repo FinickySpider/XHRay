@@ -1,50 +1,92 @@
 @echo off
-:: XHRay GitHub Release Script with .env support
+:: XHRay Version Bump and Release Script
 
-:: Load .env if exists
-if exist ".env" (
-    for /f "usebackq tokens=1,* delims==" %%A in (`type .env`) do (
-        set %%A=%%B
-    )
+setlocal EnableDelayedExpansion
+
+:: Read most recent version tag from Git
+for /f "delims=" %%i in ('git describe --tags --abbrev=0') do set CURRENT_VERSION=%%i
+echo Detected latest version: %CURRENT_VERSION%
+
+:: Parse major.minor-patch from current version
+for /f "tokens=1,2 delims=v-" %%a in ("%CURRENT_VERSION%") do (
+    set VERSION_NUM=%%a
+    set RELEASE_SUFFIX=%%b
 )
 
-:: Prompt for version tag (e.g., v0.2-pre1)
-set /p VERSION=Enter version tag (e.g., v0.2-pre1): 
-
-:: Prompt for release title
-set /p TITLE=Enter release title (e.g., XHRay - v0.2-pre1): 
-
-:: Prompt for release description
-set /p DESCRIPTION=Enter short release description: 
+:: Split major.minor.patch
+for /f "tokens=1,2,3 delims=." %%i in ("%VERSION_NUM%") do (
+    set MAJOR=%%i
+    set MINOR=%%j
+    set PATCH=%%k
+)
 
 echo.
-echo Version Tag : %VERSION%
-echo Title       : %TITLE%
-echo Description : %DESCRIPTION%
-echo GitHub User : %GITHUB_USERNAME%
-echo Repo Name   : %GITHUB_REPO%
+echo Current Version: v%MAJOR%.%MINOR%.%PATCH%-%RELEASE_SUFFIX%
+echo.
+
+echo Choose what to bump:
+echo 1. Major (v%MAJOR%.%MINOR%.%PATCH% → v%MAJORplus%.0.0)
+echo 2. Minor (v%MAJOR%.%MINOR%.%PATCH% → v%MAJOR%.%MINORplus%.0)
+echo 3. Patch (v%MAJOR%.%MINOR%.%PATCH% → v%MAJOR%.%MINOR%.%PATCHplus%)
+echo 4. Pre-release (v%MAJOR%.%MINOR%-preX)
+echo 5. Beta (v%MAJOR%.%MINOR%-betaX)
+echo 6. Release Candidate (v%MAJOR%.%MINOR%-rcX)
+set /p BUMP=Enter selection (1-6): 
+
+:: Increment logic
+set /a MAJORplus=MAJOR+1
+set /a MINORplus=MINOR+1
+set /a PATCHplus=PATCH+1
+
+set NEW_VERSION=
+
+if "%BUMP%"=="1" set NEW_VERSION=v%MAJORplus%.0.0
+if "%BUMP%"=="2" set NEW_VERSION=v%MAJOR%.%MINORplus%.0
+if "%BUMP%"=="3" set NEW_VERSION=v%MAJOR%.%MINOR%.%PATCHplus%
+if "%BUMP%"=="4" (
+    set /p PREN=Enter pre-release number: 
+    set NEW_VERSION=v%MAJOR%.%MINOR%-pre%PREN%
+)
+if "%BUMP%"=="5" (
+    set /p BETAN=Enter beta version number: 
+    set NEW_VERSION=v%MAJOR%.%MINOR%-beta%BETAN%
+)
+if "%BUMP%"=="6" (
+    set /p RCN=Enter RC version number: 
+    set NEW_VERSION=v%MAJOR%.%MINOR%-rc%RCN%
+)
+
+echo.
+echo New Version: %NEW_VERSION%
 pause
 
 :: Git tag and push
 git add .
-git commit -m "Release %VERSION%"
-git tag %VERSION%
+git commit -m "Release %NEW_VERSION%"
+git tag %NEW_VERSION%
 git push origin main
-git push origin %VERSION%
+git push origin %NEW_VERSION%
 
-:: Optional GitHub API upload
-set /p DOUPLOAD=Upload to GitHub Releases via API (with .env)? (y/n): 
+:: Optional GitHub Release
+set /p DOUPLOAD=Upload to GitHub Releases via API (y/n)?: 
 if /I "%DOUPLOAD%"=="y" (
-    if "%GITHUB_USERNAME%"=="" (
-        echo ❌ Missing .env config. Please create and fill .env file.
+    if not exist ".env" (
+        echo ❌ Missing .env file with credentials.
         pause
         exit /b
     )
-    set "JSON={\"tag_name\":\"%VERSION%\",\"name\":\"%TITLE%\",\"body\":\"%DESCRIPTION%\",\"draft\":false,\"prerelease\":false}"
+
+    for /f "usebackq tokens=1,* delims==" %%A in (`type .env`) do (
+        set %%A=%%B
+    )
+
+    set /p TITLE=Enter release title: 
+    set /p DESCRIPTION=Enter release description: 
+    set "JSON={\"tag_name\":\"%NEW_VERSION%\",\"name\":\"%TITLE%\",\"body\":\"%DESCRIPTION%\",\"draft\":false,\"prerelease\":false}"
     curl -X POST -H "Authorization: token %GITHUB_TOKEN%" -H "Content-Type: application/json" ^
      -d "!JSON!" https://api.github.com/repos/%GITHUB_USERNAME%/%GITHUB_REPO%/releases
     echo ✅ GitHub Release API called
 )
 
-echo ✅ Release process complete. GitHub Actions will upload artifact shortly.
+echo ✅ Release v%NEW_VERSION% complete.
 pause
