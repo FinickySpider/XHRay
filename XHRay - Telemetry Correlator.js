@@ -1,8 +1,9 @@
 // ==UserScript==
-// @name         XHRay - Telemetry Correlator
+// @name         XHRay - 
+Telemetry Correlator
 // @namespace    https://example.com/
-// @version      0.3.2
-// @description  Logs DOM events and network requests with highlighting and live JSON rule editor, conditional auto-scrolling UI
+// @version      0.3.3
+// @description  Logs DOM events and network requests with highlighting, live JSON rule editor, conditional auto-scrolling, precise matching, draggable panel
 // @match        *://*/*
 // @grant        GM_download
 // @grant        GM_getValue
@@ -34,8 +35,9 @@
   let eventsLog = [];
   let requestsLog = [];
 
-  // Auto-scroll control
+  // Auto-scroll & drag control
   let autoScrollEnabled = true;
+  let dragging = false, offsetX = 0, offsetY = 0;
 
   // Utility: UUID v4
   function generateUUID() {
@@ -85,82 +87,84 @@
   function loadRules() {
     const raw = GM_getValue('telemetryRules');
     if (raw) {
-      try {
-        rules = JSON.parse(raw);
-      } catch (e) {
-        console.warn('Invalid telemetryRules JSON, using defaults');
-        rules = DEFAULT_RULES;
-      }
+      try { rules = JSON.parse(raw); }
+      catch (e) { console.warn('Invalid rules JSON, using defaults'); rules = DEFAULT_RULES; }
     } else {
       rules = DEFAULT_RULES;
     }
   }
 
-  // Match rules against a captured event
+  // Match rules against a captured event (precise via element.matches)
   function matchRulesForEvent(entry) {
     entry.rulesMatched = [];
     rules.forEach(rule => {
-      if (rule.selector && entry.selector.includes(rule.selector)) {
-        entry.rulesMatched.push(rule.name);
+      if (rule.selector) {
+        try {
+          if (entry.element.matches(rule.selector)) {
+            entry.rulesMatched.push(rule.name);
+          }
+        } catch {
+          // fallback to substring on path
+          if (entry.selector.includes(rule.selector)) {
+            entry.rulesMatched.push(rule.name);
+          }
+        }
       }
     });
   }
 
-  // Match rules against a logged request
+  // Match rules against a logged request (regex or substring)
   function matchRulesForRequest(entry) {
     entry.rulesMatched = entry.rulesMatched || [];
     rules.forEach(rule => {
-      if (rule.urlPattern) {
+      const p = rule.urlPattern;
+      if (p) {
+        let matched = false;
         try {
-          const re = new RegExp(rule.urlPattern);
-          if (re.test(entry.url)) {
-            entry.rulesMatched.push(rule.name);
-          }
-        } catch (e) {
-          console.warn('Invalid URL pattern in rule', rule);
+          const re = new RegExp(p);
+          matched = re.test(entry.url);
+        } catch {
+          matched = entry.url.includes(p);
         }
+        if (matched) entry.rulesMatched.push(rule.name);
       }
     });
   }
 
   // 1. DOM Interaction Layer
   function initDOMCapture() {
-    const eventTypes = ['click','submit','change','keydown','input'];
-    eventTypes.forEach(type => {
+    ['click','submit','change','keydown','input'].forEach(type => {
       document.addEventListener(type, evt => {
         try {
           const rec = {
             id: generateUUID(),
             type: evt.type,
             selector: getCSSPath(evt.target),
+            element: evt.target,
             text: truncate(evt.target.innerText, 50),
             timestamp: performance.now()
           };
           matchRulesForEvent(rec);
           pushToRolling(eventsLog, rec);
-        } catch(e) { /* swallow errors */ }
+        } catch {}
       }, true);
     });
   }
 
   // 2. Network Surveillance Layer
   function patchXHR() {
-    const _open = XMLHttpRequest.prototype.open;
-    const _send = XMLHttpRequest.prototype.send;
+    const o = XMLHttpRequest.prototype.open;
+    const s = XMLHttpRequest.prototype.send;
     XMLHttpRequest.prototype.open = function(method, url) {
-      this._meta = { method, url };
-      return _open.apply(this, arguments);
+      this._meta = {method, url};
+      return o.apply(this, arguments);
     };
     XMLHttpRequest.prototype.send = function(body) {
       const start = performance.now();
       this.addEventListener('loadend', () => {
         const duration = performance.now() - start;
         let rawResp = '';
-        try {
-          rawResp = this.responseText;
-        } catch {
-          rawResp = '';
-        }
+        try { rawResp = this.responseText; } catch {}
         const req = {
           id: generateUUID(),
           method: this._meta.method,
@@ -173,18 +177,17 @@
         };
         logRequest(req);
       });
-      return _send.apply(this, arguments);
+      return s.apply(this, arguments);
     };
   }
 
   function patchFetch() {
-    const _fetch = window.fetch;
+    const f = window.fetch;
     window.fetch = async (...args) => {
       const start = performance.now();
-      const response = await _fetch.apply(this, args);
-      const clone = response.clone();
-      let data;
-      try { data = await clone.text(); } catch { data = ''; }
+      const response = await f.apply(this, args);
+      let data = '';
+      try { data = await response.clone().text(); } catch {}
       const duration = performance.now() - start;
       const req = {
         id: generateUUID(),
@@ -203,18 +206,14 @@
 
   // 3. Correlation Engine
   function logRequest(req) {
-    const matchEvt = findLastEventWithin(req.timestamp, CORRELATION_WINDOW_MS);
-    if (matchEvt) {
-      req.eventId = matchEvt.id;
-      matchEvt.linkedRequests = matchEvt.linkedRequests || [];
-      matchEvt.linkedRequests.push(req.id);
+    const ev = [...eventsLog].reverse().find(e => req.timestamp - e.timestamp <= CORRELATION_WINDOW_MS);
+    if (ev) {
+      req.eventId = ev.id;
+      ev.linkedRequests = ev.linkedRequests||[];
+      ev.linkedRequests.push(req.id);
     }
     matchRulesForRequest(req);
     pushToRolling(requestsLog, req);
-  }
-
-  function findLastEventWithin(ts, windowMs) {
-    return [...eventsLog].reverse().find(e => ts - e.timestamp <= windowMs);
   }
 
   // 4. UI Overlay & Controls
@@ -222,23 +221,15 @@
     const panel = document.createElement('div');
     panel.id = 'telemetry-panel';
     Object.assign(panel.style, {
-      position: 'fixed',
-      bottom: '10px',
-      right: '10px',
-      width: '350px',
-      maxHeight: '400px',
-      overflowY: 'auto',
-      background: 'rgba(0,0,0,0.8)',
-      color: '#0f0',
-      fontSize: '12px',
-      fontFamily: 'monospace',
-      zIndex: '999999',
-      padding: '8px',
-      borderRadius: '4px'
+      position: 'fixed', width: '350px', maxHeight: '400px',
+      overflowY: 'auto', background: 'rgba(0,0,0,0.8)',
+      color: '#0f0', fontSize: '12px', fontFamily: 'monospace',
+      zIndex: '999999', padding: '8px', borderRadius: '4px',
+      bottom: '10px', right: '10px'
     });
     document.body.appendChild(panel);
 
-    // Pause/resume auto-scroll based on user scroll
+    // pause/resume auto-scroll on user scroll
     panel.addEventListener('scroll', () => {
       const atBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 5;
       autoScrollEnabled = atBottom;
@@ -251,136 +242,152 @@
   function renderLogs() {
     const panel = document.getElementById('telemetry-panel');
     if (!panel) return;
-    const entries = [...eventsLog, ...requestsLog].sort((a,b) => a.timestamp - b.timestamp);
-    panel.querySelectorAll('.entry').forEach(el => el.remove());
-    entries.forEach(entry => {
-      const el = formatEntryDOM(entry);
-      panel.appendChild(el);
-    });
-    if (autoScrollEnabled) {
-      panel.scrollTop = panel.scrollHeight;
-    }
+    const combined = [...eventsLog, ...requestsLog].sort((a,b) => a.timestamp - b.timestamp);
+    panel.querySelectorAll('.entry').forEach(e => e.remove());
+    combined.forEach(entry => panel.appendChild(formatEntryDOM(entry)));
+    if (autoScrollEnabled) panel.scrollTop = panel.scrollHeight;
   }
 
   function formatEntryDOM(entry) {
     const el = document.createElement('div');
     el.className = 'entry';
     el.style.marginBottom = '4px';
-    if (entry.rulesMatched && entry.rulesMatched.length) {
-      el.style.backgroundColor = 'rgba(255,255,0,0.2)';
+
+    // badge for matched rules
+    if (entry.rulesMatched?.length) {
+      const badge = document.createElement('span');
+      badge.textContent = entry.rulesMatched.length;
+      Object.assign(badge.style, {
+        marginLeft: '6px', background: '#f90', color: '#000',
+        fontSize: '10px', padding: '1px 4px', borderRadius: '3px'
+      });
+      el.appendChild(badge);
       el.title = 'Rules: ' + entry.rulesMatched.join(', ');
     }
+
     const time = (entry.timestamp - (window.__telemetryStart||0)).toFixed(0);
-    let text = '';
-    if (entry.type) {
-      text = `[E:${entry.type}] ${truncate(entry.selector,30)} @${time}ms`;
-    } else {
-      text = `[R:${entry.method}] ${truncate(entry.url,30)} @${time}ms`;
-      if (entry.eventId) text += ' ↔';
-    }
-    el.textContent = text;
+    const text = entry.type
+      ? `[E:${entry.type}] ${truncate(entry.selector,30)} @${time}ms`
+      : `[R:${entry.method}] ${truncate(entry.url,30)} @${time}ms` + (entry.eventId ? ' ↔' : '');
+
+    el.insertAdjacentText('afterbegin', text);
     return el;
   }
 
   function addControlButtons(panel) {
     window.__telemetryStart = performance.now();
     const btns = document.createElement('div');
+    btns.id = 'telemetry-controls';
     btns.style.marginBottom = '6px';
+    btns.style.cursor = 'move';
 
-    const toggle = document.createElement('button');
-    toggle.textContent = 'Hide';
-    Object.assign(toggle.style, { marginRight: '4px', fontSize:'10px' });
-    toggle.onclick = () => {
-      panel.querySelectorAll('.entry').forEach(e => {
-        e.style.display = e.style.display==='none'?'block':'none';
+    ['Hide','Clear','Export'].forEach((label, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = label;
+      btn.style.fontSize = '10px';
+      if (i < 2) btn.style.marginRight = '4px';
+      btn.addEventListener('click', () => {
+        if (label === 'Hide') {
+          panel.querySelectorAll('.entry').forEach(e => e.style.display = e.style.display==='none'?'block':'none');
+          btn.textContent = btn.textContent==='Hide'?'Show':'Hide';
+        }
+        if (label === 'Clear') { eventsLog = []; requestsLog = []; renderLogs(); }
+        if (label === 'Export') exportLogs();
       });
-      toggle.textContent = toggle.textContent === 'Hide' ? 'Show' : 'Hide';
-    };
-    btns.appendChild(toggle);
-
-    const clr = document.createElement('button');
-    clr.textContent = 'Clear';
-    Object.assign(clr.style, { marginRight: '4px', fontSize:'10px' });
-    clr.onclick = () => { eventsLog = []; requestsLog = []; renderLogs(); };
-    btns.appendChild(clr);
-
-    const exp = document.createElement('button');
-    exp.textContent = 'Export';
-    exp.style.fontSize='10px';
-    exp.onclick = exportLogs;
-    btns.appendChild(exp);
+      btns.appendChild(btn);
+    });
 
     panel.appendChild(btns);
+
+    // draggable panel via controls bar
+    btns.addEventListener('mousedown', e => {
+      dragging = true;
+      offsetX = e.clientX - panel.getBoundingClientRect().left;
+      offsetY = e.clientY - panel.getBoundingClientRect().top;
+      panel.style.bottom = 'auto';
+      panel.style.right = 'auto';
+      document.addEventListener('mousemove', onDrag);
+      document.addEventListener('mouseup', onStopDrag);
+    });
+  }
+
+  function onDrag(e) {
+    if (!dragging) return;
+    const panel = document.getElementById('telemetry-panel');
+    panel.style.left = (e.clientX - offsetX) + 'px';
+    panel.style.top = (e.clientY - offsetY) + 'px';
+  }
+
+  function onStopDrag() {
+    dragging = false;
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('mouseup', onStopDrag);
   }
 
   // 4.x Live Rule Editor
   function renderRuleEditor(panel) {
-    const container = document.createElement('div');
-    container.style.marginTop = '8px';
-    container.style.borderTop = '1px solid #0f0';
-    container.style.paddingTop = '6px';
+    const c = document.createElement('div');
+    c.style.marginTop = '8px';
+    c.style.borderTop = '1px solid #0f0';
+    c.style.paddingTop = '6px';
 
-    const textarea = document.createElement('textarea');
-    textarea.style.width = '100%';
-    textarea.style.height = '100px';
-    textarea.value = JSON.stringify(rules, null, 2);
+    const ta = document.createElement('textarea');
+    ta.style.width = '100%';
+    ta.style.height = '100px';
+    ta.value = JSON.stringify(rules, null, 2);
 
-    const feedback = document.createElement('div');
-    feedback.style.color = '#f90';
-    feedback.style.margin = '4px 0';
+    const fb = document.createElement('div');
+    fb.style.color = '#f90';
+    fb.style.margin = '4px 0';
 
-    const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'Save Rules';
-    saveBtn.onclick = () => {
+    const save = document.createElement('button');
+    save.textContent = 'Save Rules';
+    save.onclick = () => {
       try {
-        const parsed = JSON.parse(textarea.value);
-        GM_setValue('telemetryRules', textarea.value);
+        const parsed = JSON.parse(ta.value);
+        GM_setValue('telemetryRules', ta.value);
         rules = parsed;
         reapplyRulesToLogs();
         renderLogs();
-        feedback.textContent = '✅ Rules saved';
+        fb.textContent = '✅ Rules saved';
       } catch (err) {
-        feedback.textContent = '❌ Invalid JSON: ' + err.message;
+        fb.textContent = '❌ Invalid JSON: ' + err.message;
       }
     };
 
-    const resetBtn = document.createElement('button');
-    resetBtn.textContent = 'Reset Defaults';
-    resetBtn.style.marginLeft = '4px';
-    resetBtn.onclick = () => {
+    const reset = document.createElement('button');
+    reset.textContent = 'Reset Defaults';
+    reset.style.marginLeft = '4px';
+    reset.onclick = () => {
       GM_setValue('telemetryRules', '');
       loadRules();
       reapplyRulesToLogs();
       renderLogs();
-      textarea.value = JSON.stringify(rules, null, 2);
-      feedback.textContent = 'ℹ️ Defaults restored';
+      ta.value = JSON.stringify(rules, null, 2);
+      fb.textContent = 'ℹ️ Defaults restored';
     };
 
-    container.appendChild(textarea);
-    container.appendChild(feedback);
-    container.appendChild(saveBtn);
-    container.appendChild(resetBtn);
-    panel.appendChild(container);
+    c.appendChild(ta);
+    c.appendChild(fb);
+    c.appendChild(save);
+    c.appendChild(reset);
+    panel.appendChild(c);
   }
 
-  // Utility: re-run matching on all existing entries
+  // Re-run matchers on all logs
   function reapplyRulesToLogs() {
-    eventsLog.forEach(entry => matchRulesForEvent(entry));
-    requestsLog.forEach(entry => matchRulesForRequest(entry));
+    eventsLog.forEach(matchRulesForEvent);
+    requestsLog.forEach(matchRulesForRequest);
   }
 
-  // 5. Export Functionality
+  // Export
   function exportLogs() {
     const data = JSON.stringify({ events: eventsLog, requests: requestsLog }, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
-    GM_download({
-      url: URL.createObjectURL(blob),
-      name: 'telemetry-logs.json',
-      onerror: () => console.error('Download failed')
-    });
+    GM_download({ url: URL.createObjectURL(blob), name: 'telemetry-logs.json' });
   }
 
-  // 6. Bootstrap sequence
+  // Bootstrap
   function bootstrap() {
     loadRules();
     initDOMCapture();
