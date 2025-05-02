@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         XHRay - Telemetry Correlator
 // @namespace    https://example.com/
-// @version      0.2.1
-// @description  Logs DOM events and network requests, correlates them, applies JSON rules for highlighting
+// @version      0.3.0
+// @description  Logs DOM events and network requests, correlates them, applies JSON rules for highlighting, live rule editor UI
 // @match        *://*/*
 // @grant        GM_download
 // @grant        GM_getValue
+// @grant        GM_setValue
 // @run-at       document-start
 // ==/UserScript==
 
@@ -151,11 +152,10 @@
       const start = performance.now();
       this.addEventListener('loadend', () => {
         const duration = performance.now() - start;
-        // Safely attempt to read responseText
         let rawResp = '';
         try {
           rawResp = this.responseText;
-        } catch (err) {
+        } catch {
           rawResp = '';
         }
         const req = {
@@ -235,6 +235,7 @@
     });
     document.body.appendChild(panel);
     addControlButtons(panel);
+    renderRuleEditor(panel);
   }
 
   function renderLogs() {
@@ -252,7 +253,6 @@
     const el = document.createElement('div');
     el.className = 'entry';
     el.style.marginBottom = '4px';
-    // highlight if any rule matched
     if (entry.rulesMatched && entry.rulesMatched.length) {
       el.style.backgroundColor = 'rgba(255,255,0,0.2)';
       el.title = 'Rules: ' + entry.rulesMatched.join(', ');
@@ -274,7 +274,6 @@
     const btns = document.createElement('div');
     btns.style.marginBottom = '6px';
 
-    // Toggle
     const toggle = document.createElement('button');
     toggle.textContent = 'Hide';
     Object.assign(toggle.style, { marginRight: '4px', fontSize:'10px' });
@@ -286,14 +285,12 @@
     };
     btns.appendChild(toggle);
 
-    // Clear
     const clr = document.createElement('button');
     clr.textContent = 'Clear';
     Object.assign(clr.style, { marginRight: '4px', fontSize:'10px' });
     clr.onclick = () => { eventsLog = []; requestsLog = []; renderLogs(); };
     btns.appendChild(clr);
 
-    // Export
     const exp = document.createElement('button');
     exp.textContent = 'Export';
     exp.style.fontSize='10px';
@@ -301,6 +298,62 @@
     btns.appendChild(exp);
 
     panel.appendChild(btns);
+  }
+
+  // 4.x Live Rule Editor
+  function renderRuleEditor(panel) {
+    const container = document.createElement('div');
+    container.style.marginTop = '8px';
+    container.style.borderTop = '1px solid #0f0';
+    container.style.paddingTop = '6px';
+
+    const textarea = document.createElement('textarea');
+    textarea.style.width = '100%';
+    textarea.style.height = '100px';
+    textarea.value = JSON.stringify(rules, null, 2);
+
+    const feedback = document.createElement('div');
+    feedback.style.color = '#f90';
+    feedback.style.margin = '4px 0';
+
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save Rules';
+    saveBtn.onclick = () => {
+      try {
+        const parsed = JSON.parse(textarea.value);
+        GM_setValue('telemetryRules', textarea.value);
+        rules = parsed;
+        reapplyRulesToLogs();
+        renderLogs();
+        feedback.textContent = '✅ Rules saved';
+      } catch (err) {
+        feedback.textContent = '❌ Invalid JSON: ' + err.message;
+      }
+    };
+
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = 'Reset Defaults';
+    resetBtn.style.marginLeft = '4px';
+    resetBtn.onclick = () => {
+      GM_setValue('telemetryRules', '');
+      loadRules();
+      reapplyRulesToLogs();
+      renderLogs();
+      textarea.value = JSON.stringify(rules, null, 2);
+      feedback.textContent = 'ℹ️ Defaults restored';
+    };
+
+    container.appendChild(textarea);
+    container.appendChild(feedback);
+    container.appendChild(saveBtn);
+    container.appendChild(resetBtn);
+    panel.appendChild(container);
+  }
+
+  // Utility: re-run matching on all existing entries
+  function reapplyRulesToLogs() {
+    eventsLog.forEach(entry => matchRulesForEvent(entry));
+    requestsLog.forEach(entry => matchRulesForRequest(entry));
   }
 
   // 5. Export Functionality
