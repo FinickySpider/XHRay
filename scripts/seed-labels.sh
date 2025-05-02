@@ -2,7 +2,7 @@
 
 # Requires: gh CLI logged in (`gh auth login`)
 
-REPO="your-username/xhray-telemetry-correlator"
+REPO="FinickySpider/XHRay"
 
 LABELS=(
   "feature:New features|0e8a16"

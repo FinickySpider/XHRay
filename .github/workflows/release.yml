@@ -29,22 +29,22 @@ jobs:
       - name: Rename built file with version
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
-          OUTPUT="xhray-telemetry-correlator_${VERSION}.user.js"
+          OUTPUT="XHRay_${VERSION}.user.js"
           mv dist/xhray.user.js "$OUTPUT"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "OUTPUT=$OUTPUT" >> $GITHUB_ENV
 
       - name: Zip release
         run: |
-          zip "xhray-telemetry-correlator_${{ env.VERSION }}.zip" ${{ env.OUTPUT }}
+          zip "XHRay_${{ env.VERSION }}.zip" ${{ env.OUTPUT }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          name: xhray-telemetry-correlator_${{ env.VERSION }}
+          name: XHRay_${{ env.VERSION }}
           tag_name: ${{ env.VERSION }}
           files: |
-            xhray-telemetry-correlator_${{ env.VERSION }}.user.js
-            xhray-telemetry-correlator_${{ env.VERSION }}.zip
+            XHRay_${{ env.VERSION }}.user.js
+            XHRay_${{ env.VERSION }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

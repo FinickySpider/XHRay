@@ -1,10 +1,10 @@
 # 🛰️ XHRay – Telemetry Correlator
 
-[![Version](https://img.shields.io/github/v/tag/FinickySpider/xhray-telemetry-correlator?label=version&style=flat-square)](https://github.com/FinickySpider/xhray-telemetry-correlator/releases)
-[![Build](https://github.com/FinickySpider/xhray-telemetry-correlator/actions/workflows/build.yml/badge.svg)](https://github.com/FinickySpider/xhray-telemetry-correlator/actions)
-[![Release](https://github.com/FinickySpider/xhray-telemetry-correlator/actions/workflows/release.yml/badge.svg)](https://github.com/FinickySpider/xhray-telemetry-correlator/releases)
-[![License](https://img.shields.io/github/license/FinickySpider/xhray-telemetry-correlator?style=flat-square)](LICENSE)
-[![Userscript Installs](https://img.shields.io/badge/userscript-install-green?style=flat-square)](https://github.com/FinickySpider/xhray-telemetry-correlator/raw/main/dist/xhray.user.js)
+[![Version](https://img.shields.io/github/v/tag/FinickySpider/XHRay?label=version&style=flat-square)](https://github.com/FinickySpider/XHRay/releases)
+[![Build](https://github.com/FinickySpider/XHRay/actions/workflows/build.yml/badge.svg)](https://github.com/FinickySpider/XHRay/actions)
+[![Release](https://github.com/FinickySpider/XHRay/actions/workflows/release.yml/badge.svg)](https://github.com/FinickySpider/XHRay/releases)
+[![License](https://img.shields.io/github/license/FinickySpider/XHRay?style=flat-square)](LICENSE)
+[![Userscript Installs](https://img.shields.io/badge/userscript-install-green?style=flat-square)](https://github.com/FinickySpider/XHRay/raw/main/dist/xhray.user.js)
 
 ---
 
