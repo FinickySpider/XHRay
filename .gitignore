@@ -1,0 +1,224 @@
+# ----------------------
+# OS-SPECIFIC FILES
+# ----------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+__MACOSX/
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+.nfs*
+
+# ----------------------
+# VSCODE SETTINGS
+# ----------------------
+.vscode/
+.history/
+.code-workspace
+
+# ----------------------
+# LOG FILES
+# ----------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+tslint.log
+vite-error.log
+rollup.log
+
+# ----------------------
+# NODE.JS PROJECTS
+# ----------------------
+node_modules/
+jspm_packages/
+bower_components/
+.pnp/
+.pnp.js
+
+# Optional cache files
+.cache/
+.next/
+.nuxt/
+out/
+dist/
+build/
+coverage/
+.nyc_output/
+.eslintcache
+
+# Runtime
+.env
+.env.*
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Package manager lock files (optional)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+# bun.lockb
+
+# ----------------------
+# PYTHON
+# ----------------------
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+*.manifest
+pip-log.txt
+htmlcov/
+.mypy_cache/
+.pytest_cache/
+.tox/
+coverage.xml
+.cache/
+.venv/
+venv/
+env/
+ENV/
+*.db
+*.sqlite
+
+# ----------------------
+# RUST
+# ----------------------
+/target/
+**/*.rs.bk
+
+# ----------------------
+# GO
+# ----------------------
+/bin/
+/pkg/
+/coverage.out
+
+# ----------------------
+# JAVA
+# ----------------------
+*.class
+*.jar
+*.war
+*.ear
+*.iml
+*.ipr
+*.iws
+*.class
+target/
+build/
+.gradle/
+.idea/
+
+# ----------------------
+# .NET
+# ----------------------
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.sln.docstates
+*.pdb
+
+# ----------------------
+# C/C++
+# ----------------------
+*.o
+*.obj
+*.so
+*.exe
+*.out
+*.dll
+*.lib
+*.a
+*.dSYM/
+build/
+
+# ----------------------
+# FRONTEND TOOLS
+# ----------------------
+.cache/
+.storybook/
+.cypress/
+.sass-cache/
+.vite/
+vite.config.*
+tailwind.config.*
+webpack.config.*
+rollup.config.*
+postcss.config.*
+
+# ----------------------
+# DATABASE
+# ----------------------
+*.sqlite
+*.db
+*.sql
+*.psql
+
+# ----------------------
+# DOCKER
+# ----------------------
+docker-compose.override.yml
+.docker/
+*.pid
+
+# ----------------------
+# MONOREPO/MISC
+# ----------------------
+lerna-debug.log
+*.tsbuildinfo
+turbo/
+apps/**/dist/
+packages/**/dist/
+
+# ----------------------
+# IDE & TOOLING
+# ----------------------
+.idea/
+*.sublime*
+*.sw?
+*.bak
+*.tmp
+*.orig
+*.rej
+
+# ----------------------
+# SECURITY & SECRETS
+# ----------------------
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+*.pfx
+
+# ----------------------
+# CUSTOM: REMOVE IF NOT NEEDED
+# ----------------------
+# Allow uploads/.gitkeep, ignore everything else in uploads
+uploads/*
+!uploads/.gitkeep
+
+# Block Git hooks
+.husky/_/
