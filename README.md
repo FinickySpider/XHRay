@@ -1,5 +1,17 @@
 # 🛰️ XHRay – Telemetry Correlator
 
+[![Version](https://img.shields.io/github/v/tag/FinickySpider/xhray-telemetry-correlator?label=version&style=flat-square)](https://github.com/FinickySpider/xhray-telemetry-correlator/releases)
+[![Build](https://github.com/FinickySpider/xhray-telemetry-correlator/actions/workflows/build.yml/badge.svg)](https://github.com/FinickySpider/xhray-telemetry-correlator/actions)
+[![Release](https://github.com/FinickySpider/xhray-telemetry-correlator/actions/workflows/release.yml/badge.svg)](https://github.com/FinickySpider/xhray-telemetry-correlator/releases)
+[![License](https://img.shields.io/github/license/FinickySpider/xhray-telemetry-correlator?style=flat-square)](LICENSE)
+[![Userscript Installs](https://img.shields.io/badge/userscript-install-green?style=flat-square)](https://github.com/FinickySpider/xhray-telemetry-correlator/raw/main/dist/xhray.user.js)
+
+---
+
+> Replace `FinickySpider` in the URLs above with your GitHub username before publishing
+
+# 🛰️ XHRay – Telemetry Correlator
+
 **XHRay** is a modular, extensible Tampermonkey userscript for correlating DOM events and network telemetry (XHR, fetch, WebSocket, sendBeacon) with rule-based matching and a live UI panel.
 
 ---
