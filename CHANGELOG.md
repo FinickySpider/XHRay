@@ -2,45 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## 1.1.0 (2025-05-02)
-
-
-### 📖 Documentation
-
-* add badges to README ([0f48c72](https://github.com/FinickySpider/XHRay/commit/0f48c72122f731e76329a05a2a24d533c229d267))
-* **guide:** add setup and usage guide for XHRay ([6e9eca6](https://github.com/FinickySpider/XHRay/commit/6e9eca679846f8af5d3d879dc168f8ffb628b17c))
-
-
-### 🏗 Build System
-
-* **dependencies:** add standard-version for release management ([0f21003](https://github.com/FinickySpider/XHRay/commit/0f21003e8174b8fb463e5b25cee16e0041a4158b))
-
-
-### ✨ Features
-
-* **ci:** add GitHub Actions workflows for build and release ([27c0f98](https://github.com/FinickySpider/XHRay/commit/27c0f981fdd5ec76c2d516eeea7ed17bb61de4ce))
-* **devcontainer:** add dev container configuration for VS Code ([68374ee](https://github.com/FinickySpider/XHRay/commit/68374ee746f38ac648f2ef55974f9e9ef4d3e1f0))
-* **docs:** add initial documentation with changelog and release notes ([58fbe31](https://github.com/FinickySpider/XHRay/commit/58fbe31899791ea665e9592930ac292d4ec58b68))
-* **docs:** enhance index page with detailed XHRay info ([ec1636b](https://github.com/FinickySpider/XHRay/commit/ec1636b8a83838ad6aaa348504efdc1df98660c6))
-* **docs:** initialize documentation and testing infrastructure ([015dc9f](https://github.com/FinickySpider/XHRay/commit/015dc9fb88fe3c03d2377ecd768554bb20ac331d))
-* **github:** update funding links, add bug report template and test matrix ([4a9a302](https://github.com/FinickySpider/XHRay/commit/4a9a3029db4c183aaab3175e7dbb5fcee14af162))
-* **gitignore,script:** add .gitignore and telemetry correlator script ([10abe28](https://github.com/FinickySpider/XHRay/commit/10abe28683e24632945b4d0c4cfc4fa66b561d27))
-* **project-setup:** add versioning config and contribution guide ([19c6b70](https://github.com/FinickySpider/XHRay/commit/19c6b70366bb166a3369a4253c9c1427509f4589))
-* **release:** enhance release-tag script with version bump options ([1ea61f8](https://github.com/FinickySpider/XHRay/commit/1ea61f8535547a43a569084e0518e28df2462cef))
-* **telemetry:** enhance UI with draggable panel and precise rule matching ([74367fb](https://github.com/FinickySpider/XHRay/commit/74367fb2d4b61a303db30f7b97da7b669e3d94ce))
-* **ui:** add conditional auto-scrolling to log panel ([6bdc96c](https://github.com/FinickySpider/XHRay/commit/6bdc96ca6829f71d4e9056acbf7ca829db367ae0))
-* **ui:** add live rule editor to telemetry correlator ([837a1d3](https://github.com/FinickySpider/XHRay/commit/837a1d3d70c811eb078e048d77609fcf5c1d6b3c))
-
-
-### 🧹 Refactoring
-
-* **repository:** update project references to XHRay ([162a1ef](https://github.com/FinickySpider/XHRay/commit/162a1ef27805967acb48e979f6dbf97f0fc5d835))
-
-
-### 🐛 Bug Fixes
-
-* **docs:** update file extension and author name in index ([363af7d](https://github.com/FinickySpider/XHRay/commit/363af7de61f3f1c98ec59a3660efdd41b5707bca))
-* **funding:** correct Ko-fi username in FUNDING.yml ([b04978e](https://github.com/FinickySpider/XHRay/commit/b04978ee5803ca766bf384ab9af4609522c5de43))
+### [1.1.1](https://github.com/FinickySpider/XHRay/compare/v1.1.0...v1.1.1) (2025-05-02)
 
 ### Changelog
 
