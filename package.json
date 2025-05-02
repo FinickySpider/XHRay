@@ -1,12 +1,11 @@
 {
   "name": "xhray-telemetry-correlator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "XHRay - Telemetry Correlator (Modular Tampermonkey Dev Setup)",
   "scripts": {
     "dev": "vite",
     "release": "standard-version",
     "postrelease": "git push --follow-tags origin main && npm publish",
-    "prepare": "husky install",
     "build": "vite build"
   },
   "devDependencies": {
