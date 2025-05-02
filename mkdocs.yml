@@ -1,0 +1,8 @@
+site_name: XHRay Docs
+theme:
+  name: material
+nav:
+  - Home: index.md
+  - Guide: guide.md
+  - Changelog: changelog.md
+  - Release Notes: release-notes.txt
