@@ -1,0 +1,43 @@
+name: Auto GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build script
+        run: npm run build
+
+      - name: Package Release
+        run: |
+          mkdir release
+          cp dist/xhray.user.js release/xhray-telemetry-correlator_${{ github.ref_name }}.user.js
+          zip -r release/xhray-telemetry-correlator_${{ github.ref_name }}.zip release/*
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          body_path: CHANGELOG.md
+          files: |
+            release/xhray-telemetry-correlator_${{ github.ref_name }}.user.js
+            release/xhray-telemetry-correlator_${{ github.ref_name }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
