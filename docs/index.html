@@ -1,18 +1,72 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>XHRay Docs</title>
+  <meta charset="UTF-8">
+  <title>XHRay - Telemetry Correlator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: sans-serif; padding: 2em; background: #111; color: #eee; max-width: 700px; margin: auto; }
-    a { color: #0bf; display: block; margin-bottom: 10px; }
+    body {
+      background: #0b0b0b;
+      color: #f2f2f2;
+      font-family: system-ui, sans-serif;
+      max-width: 800px;
+      margin: auto;
+      padding: 2rem;
+    }
+    h1 { color: #00f6ff; }
+    h2 { color: #f90; margin-top: 2rem; }
+    a {
+      color: #0bf;
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 0.5rem;
+    }
+    code {
+      background: #222;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .badges img {
+      margin-right: 6px;
+      vertical-align: middle;
+    }
   </style>
 </head>
 <body>
-  <h1>📘 XHRay Documentation</h1>
-  <p>Welcome to the official documentation hub for XHRay - Telemetry Correlator.</p>
-  <h3>Available Pages</h3>
-  <a href="changelog.html">📦 Changelog Viewer</a>
+  <h1>🛰️ XHRay - Telemetry Correlator</h1>
+  <p><strong>XHRay</strong> is a modular Tampermonkey userscript that captures and correlates browser telemetry events — including <code>click</code>, <code>submit</code>, <code>xhr</code>, <code>fetch</code>, <code>WebSocket</code>, and <code>sendBeacon</code> — with live rule matching and a draggable UI overlay panel.</p>
+
+  <div class="badges">
+    <img src="https://img.shields.io/github/v/tag/FinickySpider/xhray-telemetry-correlator?label=version" alt="version">
+    <img src="https://github.com/FinickySpider/xhray-telemetry-correlator/actions/workflows/build.yml/badge.svg" alt="build">
+    <img src="https://github.com/FinickySpider/xhray-telemetry-correlator/actions/workflows/release.yml/badge.svg" alt="release">
+  </div>
+
+  <h2>🔧 Key Features</h2>
+  <ul>
+    <li>DOM + network telemetry capture</li>
+    <li>Live rule matching engine</li>
+    <li>Draggable, toggleable floating panel</li>
+    <li>Built-in JSON rule editor</li>
+    <li>WebSocket + Beacon tracking</li>
+    <li>Dark mode, log size, persistence options</li>
+  </ul>
+
+  <h2>📦 Installation</h2>
+  <ol>
+    <li>Install <a href="https://www.tampermonkey.net/" target="_blank">Tampermonkey</a></li>
+    <li><a href="https://github.com/FinickySpider/xhray-telemetry-correlator/raw/main/dist/xhray.user.js">Install XHRay Userscript</a></li>
+  </ol>
+
+  <h2>📚 Documentation</h2>
+  <a href="changelog.html">📦 Changelog</a><br>
+  <a href="guide.md">📘 Guide</a><br>
   <a href="release-notes.txt">📝 Release Notes</a>
+
+  <h2>💻 Contributing</h2>
+  <p>Fork the repo, enable GitHub Pages from the <code>/docs</code> folder, and run <code>release-tag.bat</code> to auto-publish versioned releases and changelogs.</p>
+
+  <p style="margin-top: 3rem;">Made with 🖤 by <strong>YOUR NAME</strong></p>
 </body>
 </html>
