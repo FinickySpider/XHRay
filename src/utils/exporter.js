@@ -1,3 +1,4 @@
+// Helper for exporting captured logs as a JSON file using the userscript API
 import { eventsLog, requestsLog } from '../storage/persistence.js';
 
 export function exportLogs() {

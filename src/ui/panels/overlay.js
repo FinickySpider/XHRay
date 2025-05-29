@@ -1,3 +1,5 @@
+// UI overlay that displays telemetry events and network requests in real time.
+// Also hosts the rule editor and export functionality.
 import { eventsLog, requestsLog } from '../../storage/persistence.js';
 import { renderRuleEditor } from './ruleEditor.js';
 import { exportLogs } from '../../utils/exporter.js';
@@ -8,7 +10,9 @@ let autoScrollEnabled = true;
 let panelHidden = false;
 let dragging = false, offsetX = 0, offsetY = 0;
 
+// Build and insert the floating telemetry panel along with its controls
 export function createPanel() {
+  // Main container element for the overlay
   panel = document.createElement('div');
   panel.id = 'telemetry-panel';
   Object.assign(panel.style, {
@@ -20,6 +24,7 @@ export function createPanel() {
   });
   document.body.appendChild(panel);
 
+  // Toggle auto scrolling when the user scrolls manually
   panel.addEventListener('scroll', () => {
     const atBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 5;
     autoScrollEnabled = atBottom;
@@ -28,6 +33,7 @@ export function createPanel() {
   addControlButtons(panel);
   renderRuleEditor(panel);
 
+  // Button used to re-open the panel when hidden
   showBtn = document.createElement('button');
   showBtn.textContent = 'Show Telemetry';
   Object.assign(showBtn.style, {
@@ -45,6 +51,7 @@ export function createPanel() {
     cursor: 'pointer'
   });
   showBtn.onclick = () => {
+    // Reveal the panel and refresh the contents
     panelHidden = false;
     panel.style.display = '';
     showBtn.style.display = 'none';
@@ -52,22 +59,27 @@ export function createPanel() {
   };
   document.body.appendChild(showBtn);
 
+  // Apply theme styles once the elements exist
   applyTheme(panel, showBtn);
 }
 
+// Render the current event and request logs into the overlay
 export function renderLogs() {
   if (!panel || panelHidden) return;
   const combined = [...eventsLog, ...requestsLog].sort((a, b) => a.timestamp - b.timestamp);
+  // Clear previous entries before re-rendering
   panel.querySelectorAll('.entry').forEach(e => e.remove());
   combined.forEach(entry => panel.appendChild(formatEntryDOM(entry)));
   if (autoScrollEnabled) panel.scrollTop = panel.scrollHeight;
 }
 
+// Create DOM nodes for each log entry displayed in the panel
 function formatEntryDOM(entry) {
   const el = document.createElement('div');
   el.className = 'entry';
   el.style.marginBottom = '4px';
 
+  // Display a small badge when rules matched this entry
   if (entry.rulesMatched?.length) {
     const badge = document.createElement('span');
     badge.textContent = entry.rulesMatched.length;
@@ -88,6 +100,7 @@ function formatEntryDOM(entry) {
   return el;
 }
 
+// Create the hide/clear/export buttons and wire up dragging behaviour
 function addControlButtons(panel) {
   window.__telemetryStart = performance.now();
   const btns = document.createElement('div');
@@ -137,12 +150,14 @@ function addControlButtons(panel) {
   });
 }
 
+// Drag handler for moving the overlay around the screen
 function onDrag(e) {
   if (!dragging || !panel) return;
   panel.style.left = (e.clientX - offsetX) + 'px';
   panel.style.top = (e.clientY - offsetY) + 'px';
 }
 
+// Stop dragging and remove temporary handlers
 function onStopDrag() {
   dragging = false;
   document.removeEventListener('mousemove', onDrag);

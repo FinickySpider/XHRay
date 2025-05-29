@@ -1,5 +1,5 @@
 #!/bin/bash
-
+# Seed common GitHub issue labels using the gh CLI
 # Requires: gh CLI logged in (`gh auth login`)
 
 REPO="FinickySpider/XHRay"
