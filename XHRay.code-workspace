@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"hide-files.files": [
+			"node_modules",
+			".vscode",
+			"package-lock.json",
+			".versionrc.json",
+			".devcontainer",
+			"XHRay.code-workspace",
+			".env.example",
+			".husky/_",
+			".github"
+		]
+	}
+}
