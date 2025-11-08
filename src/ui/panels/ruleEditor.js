@@ -1,31 +1,48 @@
 import { rules, resetRulesToDefault } from '../../matchers/rules.js';
 import { loadRules } from '../../storage/persistence.js';
 import { renderLogs } from './overlay.js';
+import { getThemeColors } from '../../settings/theme.js';
 
 export function renderRuleEditor(container) {
-  const dark = !!GM_getValue("darkTheme", true);
+  const theme = getThemeColors();
   let rulesExpanded = !!GM_getValue("rulesExpanded", false);
   
   const c = document.createElement('div');
   c.style.marginTop = '8px';
-  c.style.borderTop = dark ? '1px solid rgba(0, 255, 0, 0.3)' : '1px solid rgba(34, 34, 34, 0.3)';
-  c.style.paddingTop = '6px';
+  c.style.borderTop = `1px solid ${theme.border}`;
+  c.style.paddingTop = '8px';
 
   // Toggle button for collapsible rules
   const toggleBtn = document.createElement('button');
   toggleBtn.textContent = rulesExpanded ? '▼ Rules Editor' : '▶ Rules Editor';
   Object.assign(toggleBtn.style, {
     fontSize: '11px',
-    marginBottom: '6px',
-    background: dark ? '#222' : '#f0f0f0',
-    color: dark ? '#0f0' : '#222',
-    border: dark ? '1px solid #0f0' : '1px solid #888',
-    borderRadius: '3px',
-    padding: '4px 8px',
+    marginBottom: '8px',
+    background: theme.bgTertiary,
+    color: theme.textPrimary,
+    border: `1px solid ${theme.border}`,
+    borderRadius: '6px',
+    padding: '6px 12px',
     cursor: 'pointer',
     width: '100%',
-    textAlign: 'left'
+    textAlign: 'left',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontWeight: '500',
+    transition: 'all 0.2s ease',
+    boxShadow: theme.shadowSmall
   });
+
+  // Hover effect
+  toggleBtn.onmouseenter = () => {
+    toggleBtn.style.background = theme.bgHover;
+    toggleBtn.style.borderColor = theme.accent;
+    toggleBtn.style.boxShadow = theme.shadowAccent;
+  };
+  toggleBtn.onmouseleave = () => {
+    toggleBtn.style.background = theme.bgTertiary;
+    toggleBtn.style.borderColor = theme.border;
+    toggleBtn.style.boxShadow = theme.shadowSmall;
+  };
 
   // Content container (collapsible)
   const contentContainer = document.createElement('div');
@@ -34,37 +51,73 @@ export function renderRuleEditor(container) {
   const ta = document.createElement('textarea');
   Object.assign(ta.style, {
     width: '100%',
-    height: '100px',
-    background: dark ? '#1a1a1a' : '#fff',
-    color: dark ? '#e0e0e0' : '#222',
-    border: dark ? '1px solid #0f0' : '1px solid #888',
-    fontFamily: 'monospace',
+    height: '120px',
+    background: theme.bgPrimary,
+    color: theme.textPrimary,
+    border: `1px solid ${theme.border}`,
+    borderRadius: '6px',
+    fontFamily: 'Consolas, Monaco, monospace',
     fontSize: '11px',
-    padding: '4px',
-    boxSizing: 'border-box'
+    padding: '8px',
+    boxSizing: 'border-box',
+    resize: 'vertical',
+    transition: 'all 0.2s ease',
+    boxShadow: `inset ${theme.shadowSmall}`
   });
   ta.value = JSON.stringify(rules, null, 2);
 
-  const fb = document.createElement('div');
-  fb.style.color = '#f90';
-  fb.style.margin = '4px 0';
-  fb.style.fontSize = '11px';
-
-  const buttonStyle = {
-    fontSize: '10px',
-    marginRight: '4px',
-    background: dark ? '#222' : '#f0f0f0',
-    color: dark ? '#0f0' : '#222',
-    border: dark ? '1px solid #0f0' : '1px solid #888',
-    borderRadius: '3px',
-    padding: '4px 8px',
-    cursor: 'pointer'
+  // Focus effect
+  ta.onfocus = () => {
+    ta.style.borderColor = theme.accent;
+    ta.style.boxShadow = `inset ${theme.shadowAccent}`;
+  };
+  ta.onblur = () => {
+    ta.style.borderColor = theme.border;
+    ta.style.boxShadow = `inset ${theme.shadowSmall}`;
   };
 
-  const save = document.createElement('button');
-  save.textContent = 'Save Rules';
-  Object.assign(save.style, buttonStyle);
-  save.onclick = () => {
+  const fb = document.createElement('div');
+  fb.style.color = theme.warning;
+  fb.style.margin = '6px 0';
+  fb.style.fontSize = '11px';
+  fb.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+
+  const buttonStyle = {
+    fontSize: '11px',
+    marginRight: '6px',
+    background: theme.bgTertiary,
+    color: theme.textPrimary,
+    border: `1px solid ${theme.border}`,
+    borderRadius: '6px',
+    padding: '6px 12px',
+    cursor: 'pointer',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    fontWeight: '500',
+    transition: 'all 0.2s ease',
+    boxShadow: theme.shadowSmall
+  };
+
+  const createButton = (text, onClick) => {
+    const btn = document.createElement('button');
+    btn.textContent = text;
+    Object.assign(btn.style, buttonStyle);
+    
+    btn.onmouseenter = () => {
+      btn.style.background = theme.bgHover;
+      btn.style.borderColor = theme.accent;
+      btn.style.boxShadow = theme.shadowAccent;
+    };
+    btn.onmouseleave = () => {
+      btn.style.background = theme.bgTertiary;
+      btn.style.borderColor = theme.border;
+      btn.style.boxShadow = theme.shadowSmall;
+    };
+    
+    btn.onclick = onClick;
+    return btn;
+  };
+
+  const save = createButton('Save Rules', () => {
     try {
       const parsed = JSON.parse(ta.value);
       if (!Array.isArray(parsed)) throw new Error("Rules JSON must be an array of rule objects.");
@@ -72,27 +125,33 @@ export function renderRuleEditor(container) {
       rules.length = 0; rules.push(...parsed);
       renderLogs();
       fb.textContent = '✅ Rules saved';
+      fb.style.color = theme.success;
     } catch (err) {
       fb.textContent = '❌ Invalid JSON: ' + err.message;
+      fb.style.color = theme.error;
     }
-  };
+  });
 
-  const reset = document.createElement('button');
-  reset.textContent = 'Reset Defaults';
-  Object.assign(reset.style, buttonStyle);
-  reset.onclick = () => {
+  const reset = createButton('Reset Defaults', () => {
     GM_setValue('telemetryRules', '');
     resetRulesToDefault();
     loadRules();
     ta.value = JSON.stringify(rules, null, 2);
     renderLogs();
     fb.textContent = 'ℹ️ Defaults restored';
-  };
+    fb.style.color = theme.accent;
+  });
 
+  const buttonsContainer = document.createElement('div');
+  buttonsContainer.style.display = 'flex';
+  buttonsContainer.style.gap = '6px';
+  buttonsContainer.style.marginTop = '8px';
+  
   contentContainer.appendChild(ta);
   contentContainer.appendChild(fb);
-  contentContainer.appendChild(save);
-  contentContainer.appendChild(reset);
+  buttonsContainer.appendChild(save);
+  buttonsContainer.appendChild(reset);
+  contentContainer.appendChild(buttonsContainer);
 
   // Toggle button click handler
   toggleBtn.onclick = () => {

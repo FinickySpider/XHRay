@@ -1,7 +1,15 @@
 import { generateUUID, truncate } from '../../utils/logger.js';
-import { requestsLog, pushToRolling } from '../../storage/persistence.js';
+import { requestsLog, pushToRolling, eventsLog } from '../../storage/persistence.js';
 import { renderLogs } from '../../ui/panels/overlay.js';
 import { getLogState } from '../../storage/persistence.js';
+import { matchRulesForRequest } from '../../matchers/rules.js';
+
+// Track recent events for correlation (last 2 seconds)
+function getRecentEventId() {
+  const now = performance.now();
+  const recentEvents = eventsLog.filter(e => now - e.timestamp < 2000);
+  return recentEvents.length > 0 ? recentEvents[recentEvents.length - 1].id : null;
+}
 
 export function patchWebSocket() {
   if (!getLogState().wsLogging) return;
@@ -11,7 +19,7 @@ export function patchWebSocket() {
   window.WebSocket = function(url, protocols) {
     const ws = protocols ? new OrigWS(url, protocols) : new OrigWS(url);
     ws.addEventListener('message', event => {
-      pushToRolling(requestsLog, {
+      const entry = {
         id: generateUUID(),
         method: 'WS:recv',
         url,
@@ -20,13 +28,16 @@ export function patchWebSocket() {
         response: truncate(event.data, 1024),
         timestamp: performance.now(),
         duration: 0,
-        rulesMatched: []
-      });
+        rulesMatched: [],
+        eventId: getRecentEventId()
+      };
+      matchRulesForRequest(entry);
+      pushToRolling(requestsLog, entry);
       if (!getLogState().panelHidden) renderLogs();
     });
     const origSend = ws.send;
     ws.send = function(data) {
-      pushToRolling(requestsLog, {
+      const entry = {
         id: generateUUID(),
         method: 'WS:send',
         url,
@@ -35,8 +46,11 @@ export function patchWebSocket() {
         response: '',
         timestamp: performance.now(),
         duration: 0,
-        rulesMatched: []
-      });
+        rulesMatched: [],
+        eventId: getRecentEventId()
+      };
+      matchRulesForRequest(entry);
+      pushToRolling(requestsLog, entry);
       if (!getLogState().panelHidden) renderLogs();
       return origSend.call(this, data);
     };
