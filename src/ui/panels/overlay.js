@@ -4,12 +4,13 @@ import { exportLogs, exportSettings, importSettings } from '../../utils/exporter
 import { applyTheme, getThemeColors } from '../../settings/theme.js';
 import { rules } from '../../matchers/rules.js';
 
-let panel, showBtn, logContainer, header;
+let panel, showBtn, logContainer, inspectorPanel, splitResizeHandle, header;
 let autoScrollEnabled = true;
 let panelHidden = false;
 let dragging = false, offsetX = 0, offsetY = 0;
 let panelObserver = null;
 let resizing = false;
+let inspectorResizing = false;
 
 // Filter state
 let filterText = '';
@@ -17,17 +18,26 @@ let filterType = 'all'; // 'all', 'event', 'request', 'websocket', 'beacon'
 let filterRule = 'all'; // 'all' or specific rule name
 let filterDebounceTimer = null;
 
-// Track expanded entries to preserve state across re-renders
+// Inspector state
+let selectedEntry = null;
+let inspectorVisible = false;
+let inspectorWidth = 400; // Default width in pixels
+let activeTab = 'general'; // 'general', 'headers', 'request', 'response', 'debug'
+
+// Track expanded entries to preserve state across re-renders (will be removed later)
 let expandedEntries = new Set();
-let expandedDebugSections = new Set(); // Track which debug sections are open
-let entryScrollPositions = new Map(); // Track scroll positions of expanded entry details
-let lastRenderedCount = 0; // Track how many entries were last rendered
+let expandedDebugSections = new Set();
+let entryScrollPositions = new Map();
+let lastRenderedCount = 0;
 
 export function createPanel() {
   // Load saved state
   const savedState = getPanelState();
   panelHidden = savedState.hidden;
   const theme = getThemeColors();
+  
+  // Load inspector width from storage
+  inspectorWidth = GM_getValue('inspectorWidth', 400);
 
   // Main panel container (no scroll)
   panel = document.createElement('div');
@@ -81,21 +91,73 @@ export function createPanel() {
   addControlButtons(header);
   renderRuleEditor(header);
 
-  // Scrollable log container
+  // Create split container for logs and inspector
+  const splitContainer = document.createElement('div');
+  splitContainer.id = 'split-container';
+  Object.assign(splitContainer.style, {
+    display: 'flex',
+    flex: '1',
+    minHeight: '0',
+    position: 'relative'
+  });
+  panel.appendChild(splitContainer);
+
+  // Scrollable log container (left side of split)
   logContainer = document.createElement('div');
   logContainer.id = 'telemetry-logs';
   Object.assign(logContainer.style, {
     overflowY: 'auto',
+    overflowX: 'hidden',
     padding: '8px',
     flex: '1',
-    minHeight: '0'
+    minHeight: '0',
+    minWidth: '200px'
   });
-  panel.appendChild(logContainer);
+  splitContainer.appendChild(logContainer);
 
   logContainer.addEventListener('scroll', () => {
     const atBottom = logContainer.scrollTop + logContainer.clientHeight >= logContainer.scrollHeight - 5;
     autoScrollEnabled = atBottom;
   });
+
+  // Split resize handle
+  splitResizeHandle = document.createElement('div');
+  splitResizeHandle.id = 'split-resize-handle';
+  Object.assign(splitResizeHandle.style, {
+    width: '4px',
+    background: theme.border,
+    cursor: 'ew-resize',
+    position: 'relative',
+    flexShrink: '0',
+    transition: 'background 0.2s ease',
+    display: 'none' // Hidden until inspector is opened
+  });
+  
+  splitResizeHandle.onmouseenter = () => {
+    splitResizeHandle.style.background = theme.accent;
+  };
+  splitResizeHandle.onmouseleave = () => {
+    splitResizeHandle.style.background = theme.border;
+  };
+  
+  splitResizeHandle.addEventListener('mousedown', onSplitResizeStart);
+  splitContainer.appendChild(splitResizeHandle);
+
+  // Inspector panel (right side of split)
+  inspectorPanel = document.createElement('div');
+  inspectorPanel.id = 'inspector-panel';
+  Object.assign(inspectorPanel.style, {
+    width: `${inspectorWidth}px`,
+    minWidth: '250px',
+    maxWidth: '600px',
+    display: 'none', // Hidden by default
+    flexDirection: 'column',
+    background: theme.bgSecondary,
+    borderLeft: `1px solid ${theme.border}`,
+    overflowY: 'auto',
+    overflowX: 'hidden'
+  });
+  splitContainer.appendChild(inspectorPanel);
 
   showBtn = document.createElement('button');
   showBtn.textContent = 'Show Telemetry';
@@ -302,7 +364,7 @@ function formatEntryDOM(entry) {
   
   // Create unique ID for this entry
   const entryId = entry.id || `${entry.timestamp}-${entry.type || entry.method}`;
-  const isExpanded = expandedEntries.has(entryId);
+  const isExpanded = expandedEntries.has(entryId); // Legacy, will be removed
   
   const container = document.createElement('div');
   container.className = 'entry-container';
@@ -435,38 +497,28 @@ function formatEntryDOM(entry) {
     el.appendChild(corrIcon);
   }
 
-  // Expand/collapse indicator
-  const indicator = document.createElement('span');
-  indicator.textContent = isExpanded ? '▼' : '▶';
-  Object.assign(indicator.style, {
-    color: theme.accent,
-    fontSize: '10px'
-  });
-  el.insertBefore(indicator, el.firstChild);
+  // Remove the expand indicator - we'll use selection instead
+  // No indicator needed since we're using inspector now
   
-  // Create expandable details section
-  const detailsSection = createDetailsSection(entry);
-  detailsSection.style.display = isExpanded ? 'block' : 'none';
+  // Highlight if this entry is selected
+  const isSelected = selectedEntry && (
+    (selectedEntry.id === entry.id) || 
+    (selectedEntry.timestamp === entry.timestamp && selectedEntry.method === entry.method)
+  );
   
-  // Toggle details on click - without triggering re-render
+  if (isSelected) {
+    container.style.borderLeftColor = theme.accent;
+    container.style.background = theme.bgTertiary;
+    container.style.boxShadow = `0 0 0 1px ${theme.accent}`;
+  }
+  
+  // Click to show in inspector
   container.addEventListener('click', (e) => {
-    e.stopPropagation(); // Prevent event bubbling
-    
-    if (expandedEntries.has(entryId)) {
-      expandedEntries.delete(entryId);
-      detailsSection.style.display = 'none';
-      el.style.fontWeight = 'normal';
-      indicator.textContent = '▶';
-    } else {
-      expandedEntries.add(entryId);
-      detailsSection.style.display = 'block';
-      el.style.fontWeight = '500';
-      indicator.textContent = '▼';
-    }
+    e.stopPropagation();
+    showInspector(entry);
   });
   
   container.appendChild(el);
-  container.appendChild(detailsSection);
   
   return container;
 }
@@ -950,6 +1002,367 @@ function onStopDrag() {
     top: rect.top + 'px'
   };
   savePanelState({ position });
+}
+
+function onSplitResizeStart(e) {
+  e.stopPropagation();
+  e.preventDefault();
+  inspectorResizing = true;
+  
+  const startX = e.clientX;
+  const startWidth = inspectorPanel.offsetWidth;
+  
+  function onSplitResize(e) {
+    if (!inspectorResizing) return;
+    
+    const deltaX = startX - e.clientX; // Reversed because we're pulling from the left
+    let newWidth = startWidth + deltaX;
+    
+    // Constrain width
+    newWidth = Math.max(250, Math.min(newWidth, 600));
+    
+    inspectorPanel.style.width = newWidth + 'px';
+    inspectorWidth = newWidth;
+  }
+  
+  function onSplitResizeStop() {
+    inspectorResizing = false;
+    document.removeEventListener('mousemove', onSplitResize);
+    document.removeEventListener('mouseup', onSplitResizeStop);
+    
+    // Save inspector width
+    GM_setValue('inspectorWidth', inspectorWidth);
+  }
+  
+  document.addEventListener('mousemove', onSplitResize);
+  document.addEventListener('mouseup', onSplitResizeStop);
+}
+
+function showInspector(entry) {
+  selectedEntry = entry;
+  inspectorVisible = true;
+  
+  // Show inspector panel and resize handle
+  inspectorPanel.style.display = 'flex';
+  splitResizeHandle.style.display = 'block';
+  
+  // Render inspector content
+  renderInspectorContent();
+  
+  // Re-render logs to show selected state
+  renderLogs();
+}
+
+function hideInspector() {
+  selectedEntry = null;
+  inspectorVisible = false;
+  
+  // Hide inspector panel and resize handle
+  inspectorPanel.style.display = 'none';
+  splitResizeHandle.style.display = 'none';
+  
+  // Re-render logs to clear selected state
+  renderLogs();
+}
+
+function renderInspectorContent() {
+  if (!selectedEntry || !inspectorPanel) return;
+  
+  const theme = getThemeColors();
+  inspectorPanel.innerHTML = '';
+  
+  // Inspector header
+  const header = document.createElement('div');
+  Object.assign(header.style, {
+    padding: '12px',
+    borderBottom: `1px solid ${theme.border}`,
+    background: theme.bgTertiary,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexShrink: '0'
+  });
+  
+  const title = document.createElement('div');
+  title.textContent = 'Inspector';
+  Object.assign(title.style, {
+    fontWeight: '600',
+    fontSize: '12px',
+    color: theme.textPrimary,
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+  });
+  header.appendChild(title);
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  closeBtn.title = 'Close inspector';
+  Object.assign(closeBtn.style, {
+    background: 'transparent',
+    border: 'none',
+    color: theme.textSecondary,
+    fontSize: '16px',
+    cursor: 'pointer',
+    padding: '0 4px',
+    lineHeight: '1'
+  });
+  closeBtn.onclick = hideInspector;
+  closeBtn.onmouseenter = () => closeBtn.style.color = theme.error;
+  closeBtn.onmouseleave = () => closeBtn.style.color = theme.textSecondary;
+  header.appendChild(closeBtn);
+  
+  inspectorPanel.appendChild(header);
+  
+  // Tab bar
+  const tabBar = document.createElement('div');
+  Object.assign(tabBar.style, {
+    display: 'flex',
+    borderBottom: `1px solid ${theme.border}`,
+    background: theme.bgSecondary,
+    flexShrink: '0'
+  });
+  
+  const tabs = [
+    { id: 'general', label: 'General' },
+    { id: 'headers', label: 'Headers' },
+    { id: 'request', label: 'Request' },
+    { id: 'response', label: 'Response' },
+    { id: 'debug', label: 'Debug' }
+  ];
+  
+  tabs.forEach(tab => {
+    const tabBtn = document.createElement('button');
+    tabBtn.textContent = tab.label;
+    const isActive = activeTab === tab.id;
+    
+    Object.assign(tabBtn.style, {
+      padding: '8px 16px',
+      background: isActive ? theme.bgPrimary : 'transparent',
+      color: isActive ? theme.accent : theme.textSecondary,
+      border: 'none',
+      borderBottom: isActive ? `2px solid ${theme.accent}` : '2px solid transparent',
+      cursor: 'pointer',
+      fontSize: '11px',
+      fontWeight: isActive ? '600' : '500',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      transition: 'all 0.2s ease'
+    });
+    
+    tabBtn.onclick = () => {
+      activeTab = tab.id;
+      renderInspectorContent();
+    };
+    
+    tabBtn.onmouseenter = () => {
+      if (!isActive) {
+        tabBtn.style.background = theme.bgTertiary;
+        tabBtn.style.color = theme.textPrimary;
+      }
+    };
+    tabBtn.onmouseleave = () => {
+      if (!isActive) {
+        tabBtn.style.background = 'transparent';
+        tabBtn.style.color = theme.textSecondary;
+      }
+    };
+    
+    tabBar.appendChild(tabBtn);
+  });
+  
+  inspectorPanel.appendChild(tabBar);
+  
+  // Tab content
+  const tabContent = document.createElement('div');
+  Object.assign(tabContent.style, {
+    padding: '12px',
+    overflowY: 'auto',
+    flex: '1',
+    fontFamily: 'Consolas, Monaco, monospace',
+    fontSize: '11px',
+    color: theme.textPrimary
+  });
+  
+  // Render content based on active tab
+  const content = createTabContent(selectedEntry, activeTab, theme);
+  tabContent.innerHTML = content;
+  
+  inspectorPanel.appendChild(tabContent);
+}
+
+function createTabContent(entry, tab, theme) {
+  const lines = [];
+  
+  switch (tab) {
+    case 'general':
+      // General info
+      if (entry.type) {
+        // Event entry
+        lines.push(`<div style="margin-bottom: 12px;">`);
+        lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 4px;">EVENT TYPE</div>`);
+        lines.push(`<div style="color: ${theme.accent}; font-weight: 600;">${entry.type}</div>`);
+        lines.push(`</div>`);
+        
+        if (entry.selector) {
+          lines.push(`<div style="margin-bottom: 12px;">`);
+          lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 4px;">SELECTOR</div>`);
+          lines.push(`<div style="word-break: break-all;">${entry.selector}</div>`);
+          lines.push(`</div>`);
+        }
+        
+        if (entry.target) {
+          lines.push(`<div style="margin-bottom: 12px;">`);
+          lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 4px;">TARGET</div>`);
+          lines.push(`<div>${entry.target}</div>`);
+          lines.push(`</div>`);
+        }
+        
+        if (entry.text) {
+          lines.push(`<div style="margin-bottom: 12px;">`);
+          lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 4px;">TEXT</div>`);
+          lines.push(`<div>${entry.text}</div>`);
+          lines.push(`</div>`);
+        }
+        
+        if (entry.id) {
+          lines.push(`<div style="margin-bottom: 12px;">`);
+          lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 4px;">EVENT ID</div>`);
+          lines.push(`<div style="color: ${theme.textMuted}; font-size: 10px;">${entry.id}</div>`);
+          lines.push(`</div>`);
+        }
+      } else {
+        // Request entry
+        lines.push(`<div style="margin-bottom: 12px;">`);
+        lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 4px;">METHOD</div>`);
+        lines.push(`<div style="color: ${theme.accent}; font-weight: 600;">${entry.method}</div>`);
+        lines.push(`</div>`);
+        
+        lines.push(`<div style="margin-bottom: 12px;">`);
+        lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 4px;">URL</div>`);
+        lines.push(`<div style="word-break: break-all;">${entry.url}</div>`);
+        lines.push(`</div>`);
+        
+        if (entry.status !== undefined && entry.status !== 'message' && entry.status !== 'send') {
+          const statusColor = entry.status >= 200 && entry.status < 300 ? theme.success : theme.warning;
+          lines.push(`<div style="margin-bottom: 12px;">`);
+          lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 4px;">STATUS</div>`);
+          lines.push(`<div style="color: ${statusColor}; font-weight: 600;">${entry.status}</div>`);
+          lines.push(`</div>`);
+        }
+        
+        if (entry.eventId) {
+          lines.push(`<div style="margin-bottom: 12px;">`);
+          lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 4px;">CORRELATED EVENT</div>`);
+          lines.push(`<div style="color: ${theme.success};">↔ ${entry.eventId}</div>`);
+          lines.push(`</div>`);
+        }
+        
+        if (entry.duration !== undefined && entry.duration > 0) {
+          lines.push(`<div style="margin-bottom: 12px;">`);
+          lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 4px;">DURATION</div>`);
+          lines.push(`<div>${entry.duration.toFixed(2)}ms</div>`);
+          lines.push(`</div>`);
+        }
+      }
+      
+      // Timestamp
+      lines.push(`<div style="margin-bottom: 12px;">`);
+      lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 4px;">TIMESTAMP</div>`);
+      lines.push(`<div style="color: ${theme.textMuted}; font-size: 10px;">${new Date(entry.timestamp).toISOString()}</div>`);
+      lines.push(`</div>`);
+      
+      // Matched rules
+      if (entry.rulesMatched?.length) {
+        lines.push(`<div style="margin-bottom: 12px;">`);
+        lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 4px;">MATCHED RULES</div>`);
+        entry.rulesMatched.forEach(ruleName => {
+          lines.push(`<div style="margin: 4px 0;"><span style="color: ${theme.success};">✓</span> ${ruleName}</div>`);
+        });
+        lines.push(`</div>`);
+      }
+      break;
+      
+    case 'headers':
+      if (entry.headers) {
+        lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 8px;">REQUEST HEADERS</div>`);
+        try {
+          const headersObj = typeof entry.headers === 'string' ? JSON.parse(entry.headers) : entry.headers;
+          Object.entries(headersObj).forEach(([key, value]) => {
+            lines.push(`<div style="margin: 6px 0; padding: 8px; background: ${theme.bgPrimary}; border-radius: 4px;">`);
+            lines.push(`<div style="color: ${theme.accent}; font-weight: 600; margin-bottom: 4px; font-size: 11px;">${key}</div>`);
+            lines.push(`<div style="color: ${theme.textSecondary}; word-wrap: break-word; overflow-wrap: break-word; white-space: pre-wrap; line-height: 1.5;">${value}</div>`);
+            lines.push(`</div>`);
+          });
+        } catch {
+          lines.push(`<div style="color: ${theme.error};">Unable to parse headers</div>`);
+        }
+      } else {
+        lines.push(`<div style="color: ${theme.textMuted}; text-align: center; padding: 20px;">No headers available</div>`);
+      }
+      break;
+      
+    case 'request':
+      if (entry.body !== undefined && entry.body !== null) {
+        lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 8px;">REQUEST BODY</div>`);
+        if (entry.body === '' || entry.body === 'undefined' || entry.body === 'null') {
+          lines.push(`<div style="color: ${theme.textMuted}; font-style: italic;">(empty)</div>`);
+        } else {
+          try {
+            const bodyStr = typeof entry.body === 'string' ? entry.body : JSON.stringify(entry.body, null, 2);
+            lines.push(`<pre style="background: ${theme.bgPrimary}; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; margin: 0; line-height: 1.5;">${bodyStr}</pre>`);
+          } catch {
+            lines.push(`<div style="color: ${theme.error};">Unable to display request body</div>`);
+          }
+        }
+      } else {
+        lines.push(`<div style="color: ${theme.textMuted}; text-align: center; padding: 20px;">No request body</div>`);
+      }
+      break;
+      
+    case 'response':
+      const responseData = entry.response || entry.responseData || entry.responseText;
+      if (responseData !== undefined && responseData !== null) {
+        lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 8px;">RESPONSE DATA</div>`);
+        if (responseData === '' || responseData === 'undefined' || responseData === 'null') {
+          lines.push(`<div style="color: ${theme.textMuted}; font-style: italic;">(empty)</div>`);
+        } else {
+          try {
+            const resStr = typeof responseData === 'string' ? responseData : JSON.stringify(responseData, null, 2);
+            const truncated = resStr.length > 2000 ? resStr.slice(0, 2000) + '\n\n... (truncated - ' + resStr.length + ' total chars)' : resStr;
+            lines.push(`<pre style="background: ${theme.bgPrimary}; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; margin: 0; line-height: 1.5;">${truncated}</pre>`);
+          } catch {
+            lines.push(`<div style="color: ${theme.error};">Unable to display response</div>`);
+          }
+        }
+      } else {
+        lines.push(`<div style="color: ${theme.textMuted}; text-align: center; padding: 20px;">No response data</div>`);
+      }
+      break;
+      
+    case 'debug':
+      lines.push(`<div style="color: ${theme.textSecondary}; font-size: 10px; margin-bottom: 8px;">ALL ENTRY PROPERTIES</div>`);
+      try {
+        const safeEntry = {};
+        for (const key in entry) {
+          if (entry.hasOwnProperty(key)) {
+            try {
+              if (entry[key] instanceof Element || typeof entry[key] === 'function') {
+                safeEntry[key] = `[${typeof entry[key]}]`;
+              } else {
+                safeEntry[key] = entry[key];
+              }
+            } catch {
+              safeEntry[key] = '[Unable to access]';
+            }
+          }
+        }
+        const debugStr = JSON.stringify(safeEntry, null, 2);
+        lines.push(`<pre style="background: ${theme.bgPrimary}; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word; margin: 0; font-size: 10px; line-height: 1.5;">${debugStr}</pre>`);
+      } catch (e) {
+        lines.push(`<div style="color: ${theme.error};">Debug info unavailable: ${e.message}</div>`);
+      }
+      break;
+  }
+  
+  return lines.join('');
 }
 
 function addResizeHandle() {
