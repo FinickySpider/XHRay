@@ -474,7 +474,9 @@ toggleBtn.onclick = () => {
 | 🎯 P2 | Feature #5: Entry Expansion | 4h | Medium | Bug #4 |
 | 🎯 P2 | Feature #7: Resizable Panel | 3h | Medium | Bug #2 |
 | 🎯 P2 | Feature #8: Export/Import Settings | 2h | Medium | None |
-| 🌟 P3 | Feature #13: Filter by Rule | 2h | Low | Feature #4 |
+| � P2 | **Feature #16: Split Panel Inspector** | **5h** | **High** | **Sprint 3** |
+| 🎯 P2 | **Feature #17: Pop-Out Modals** | **2h** | **Medium** | **Feature #16** |
+| �🌟 P3 | Feature #13: Filter by Rule | 2h | Low | Feature #4 |
 | 🌟 P3 | Feature #11: WS Correlation | 4h | Medium | None |
 | 🌟 P3 | Feature #14: Advanced Themes | 6h | Low | Bug #3 |
 | 🌟 P3 | Feature #15: Rule Actions | 6h | Medium | None |
@@ -507,13 +509,185 @@ toggleBtn.onclick = () => {
 
 ---
 
-### Sprint 3: Advanced Features (10 hours)
-- [ ] Feature #5: Entry details expansion
-- [ ] Feature #8: Export/import settings
-- [ ] Feature #11: WebSocket correlation
-- [ ] Feature #13: Filter by rule
+### ✅ Sprint 3: Advanced Features (10 hours) - COMPLETED
+- [x] Feature #5: Entry details expansion
+- [x] Feature #8: Export/import settings
+- [x] Feature #11: WebSocket correlation
+- [x] Feature #13: Filter by rule
 
-**Deliverable**: Deep inspection and data portability.
+**Deliverable**: Deep inspection and data portability. ✅ **DELIVERED**
+
+**Post-Sprint Review**: Entry expansion in live-updating log caused UX issues (re-rendering, flashing, text selection loss). Moving to split panel inspector architecture for Sprint 3.5.
+
+---
+
+### 🚀 Sprint 3.5: Inspector Panel Refactor (7 hours) - IN PROGRESS
+**Description**: Replace inline entry expansion with professional split-panel inspector + pop-out modals.
+
+**Problem Statement**:
+- Current inline expansion in scrolling log causes:
+  - Visual flashing on re-renders
+  - Lost text selection when copying data
+  - Difficult to read complex JSON in scrolling context
+  - Multiple expanded entries create cluttered view
+
+**Solution**: Split panel architecture inspired by Chrome DevTools Network tab.
+
+#### Feature #16: Split Panel Inspector (5 hours)
+**Description**: Divide panel into log view (left/top) and inspector view (right/bottom).
+
+**Implementation Plan**:
+1. **Restructure Panel Layout**:
+   ```
+   ┌─────────────────────────────────────┐
+   │  Controls & Filters (fixed header)  │
+   ├──────────────────┬──────────────────┤
+   │                  │                  │
+   │  Live Log        │   Inspector      │
+   │  (scrolling)     │   (fixed)        │
+   │                  │                  │
+   │  • Entry 1       │  Selected: #4    │
+   │  • Entry 2       │  [Pop Out] [X]   │
+   │  • Entry 3       │  ╔═══════════╗   │
+   │  • Entry 4 ◄─────┼──║ General   ║   │
+   │  • Entry 5       │  ║ Headers   ║   │
+   │                  │  ║ Request   ║   │
+   │                  │  ║ Response  ║   │
+   │                  │  ║ Debug     ║   │
+   │                  │  ╚═══════════╝   │
+   └──────────────────┴──────────────────┘
+   ```
+
+2. **Build Reusable Inspector Component**:
+   ```javascript
+   function createInspectorContent(entry) {
+     // Returns DOM structure with tabbed interface
+     // Pure function - can be inserted in split panel or modal
+   }
+   ```
+
+3. **Inspector Features**:
+   - Tabbed interface: General / Headers / Request / Response / Debug
+   - No re-rendering when log updates
+   - Click entry in log → highlights it, loads into inspector
+   - Resizable split with drag handle between log and inspector
+   - Collapsible inspector (hide to see full log)
+
+**Files to Modify**:
+- `src/ui/panels/overlay.js` - Major restructure:
+  - Split panel into `.xhray-log-container` and `.xhray-inspector-panel`
+  - Add `createInspectorContent(entry)` function
+  - Add resize handle between sections
+  - Modify `formatEntryDOM()` to be click-to-select (remove inline expansion)
+  - Add `.selected` class to highlight clicked entry
+
+**Benefits**:
+- ✅ Inspector never re-renders - completely separate from log updates
+- ✅ More space for displaying complex data
+- ✅ Professional UX matching familiar DevTools pattern
+- ✅ Text selection preserved - inspector is stable DOM
+- ✅ Cleaner log view without inline expansion clutter
+
+**Acceptance Criteria**:
+- [ ] Panel splits into log (left) and inspector (right)
+- [ ] Resize handle works smoothly between sections
+- [ ] Click log entry → highlights it, loads into inspector
+- [ ] Inspector shows tabs: General, Headers, Request, Response, Debug
+- [ ] Inspector doesn't re-render when new logs arrive
+- [ ] Can collapse inspector to show full-width log
+- [ ] Selected entry highlighted in log with `.selected` class
+
+---
+
+#### Feature #17: Pop-Out Inspector Modals (2 hours)
+**Description**: Add "Pop Out" button to inspector that opens entry in floating modal. Enables side-by-side comparison of multiple entries.
+
+**Implementation Plan**:
+1. **Add Pop-Out Button to Inspector**:
+   - Button in inspector header: `[Pop Out]`
+   - Click → creates floating modal overlay with same inspector content
+   - Closes inline inspector, returns log to full width
+
+2. **Modal System**:
+   ```javascript
+   // Track open modals:
+   let openModals = []; // Array of { entryId, modalElement }
+   
+   function createInspectorModal(entry) {
+     const modal = document.createElement('div');
+     modal.className = 'xhray-inspector-modal';
+     modal.style.cssText = `
+       position: fixed;
+       top: 50px; left: 50px;
+       width: 500px; height: 600px;
+       background: #1a1a1a;
+       border: 2px solid #0f0;
+       z-index: 999999;
+       box-shadow: 0 4px 20px rgba(0,255,0,0.3);
+     `;
+     
+     // Reuse createInspectorContent() - same component!
+     modal.innerHTML = `
+       <div class="modal-header">
+         <span>Inspector: Entry #${entry.id}</span>
+         <button class="close-modal">✕</button>
+       </div>
+       ${createInspectorContent(entry).outerHTML}
+     `;
+     
+     // Make draggable (reuse existing drag code)
+     makeDraggable(modal);
+     
+     return modal;
+   }
+   ```
+
+3. **Features**:
+   - Multiple modals can be open simultaneously (compare 2-3 entries)
+   - Each modal is draggable (reuse panel drag logic)
+   - Each has close button (✕)
+   - Modals persist until closed (don't auto-close on new logs)
+   - Higher z-index than main panel (999999)
+
+**Files to Modify**:
+- `src/ui/panels/overlay.js`:
+  - Add `createInspectorModal(entry)` function
+  - Add `openModals` array tracking
+  - Add pop-out button click handler
+  - Reuse existing drag handlers for modals
+
+**Benefits**:
+- ✅ Solves multi-entry comparison problem naturally
+- ✅ Pop out Entry #1, then Entry #2 → both visible simultaneously
+- ✅ Each modal is independent, stable, no re-rendering
+- ✅ Familiar pattern from DevTools "Open in new window"
+- ✅ Minimal additional code (reuses inspector component)
+
+**Acceptance Criteria**:
+- [ ] "Pop Out" button visible in inspector header
+- [ ] Click creates floating modal with entry data
+- [ ] Modal is draggable to any position
+- [ ] Multiple modals can be open at once (2-3)
+- [ ] Each modal has close button that works
+- [ ] Modals don't interfere with log updates
+- [ ] Closing modal doesn't affect other modals
+
+---
+
+#### Cleanup Task: Remove Old Expansion Code (included in Phase 1)
+**Description**: Clean up obsolete inline expansion code now that inspector replaces it.
+
+**Files to Modify**:
+- `src/ui/panels/overlay.js`:
+  - Remove `expandedEntries` Set (line ~14)
+  - Remove `expandedDebugSections` Set (line ~15)
+  - Remove `entryScrollPositions` Map (line ~16)
+  - Remove `lastRenderedCount` (line ~17)
+  - Simplify `renderLogs()` - no expansion state tracking
+  - Remove `createDetailsSection()` function
+  - Simplify `formatEntryDOM()` - just basic entry display
+
+**Estimated Code Reduction**: ~200 lines removed
 
 ---
 
