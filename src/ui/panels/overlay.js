@@ -24,11 +24,9 @@ let inspectorVisible = false;
 let inspectorWidth = 400; // Default width in pixels
 let activeTab = 'general'; // 'general', 'headers', 'request', 'response', 'debug'
 
-// Track expanded entries to preserve state across re-renders (will be removed later)
-let expandedEntries = new Set();
-let expandedDebugSections = new Set();
-let entryScrollPositions = new Map();
-let lastRenderedCount = 0;
+// Modal state
+let poppedOutModals = []; // Array of { id, entry, element, activeTab }
+let modalIdCounter = 0;
 
 export function createPanel() {
   // Load saved state
@@ -304,25 +302,11 @@ export function renderLogs() {
   // Optimization: Only append new entries if filters haven't changed and we have existing entries
   const existingCount = logContainer.querySelectorAll('.entry-container').length;
   
-  if (existingCount > 0 && combined.length > existingCount && 
-      lastRenderedCount === existingCount &&
-      expandedEntries.size === 0) {
-    // Just append new entries (no expanded entries to worry about)
+  if (existingCount > 0 && combined.length > existingCount) {
+    // Just append new entries
     for (let i = existingCount; i < combined.length; i++) {
       logContainer.appendChild(formatEntryDOM(combined[i]));
     }
-    lastRenderedCount = combined.length;
-  } else if (existingCount > 0 && combined.length > existingCount && expandedEntries.size > 0) {
-    // We have expanded entries - only add new entries without re-rendering existing
-    for (let i = existingCount; i < combined.length; i++) {
-      logContainer.appendChild(formatEntryDOM(combined[i]));
-    }
-    lastRenderedCount = combined.length;
-    // Skip scroll manipulation to avoid flashing
-    if (wasAtBottom && autoScrollEnabled) {
-      logContainer.scrollTop = logContainer.scrollHeight;
-    }
-    return; // Early return to avoid re-render
   } else {
     // Full re-render needed (filter changed, or user cleared logs)
     logContainer.querySelectorAll('.entry-container').forEach(e => e.remove());
@@ -347,7 +331,6 @@ export function renderLogs() {
     } else {
       combined.forEach(entry => logContainer.appendChild(formatEntryDOM(entry)));
     }
-    lastRenderedCount = combined.length;
   }
   
   // Restore scroll position or scroll to bottom if was at bottom
@@ -364,7 +347,6 @@ function formatEntryDOM(entry) {
   
   // Create unique ID for this entry
   const entryId = entry.id || `${entry.timestamp}-${entry.type || entry.method}`;
-  const isExpanded = expandedEntries.has(entryId); // Legacy, will be removed
   
   const container = document.createElement('div');
   container.className = 'entry-container';
@@ -385,7 +367,7 @@ function formatEntryDOM(entry) {
   Object.assign(el.style, {
     color: theme.textPrimary,
     cursor: 'pointer',
-    fontWeight: isExpanded ? '500' : 'normal',
+    fontWeight: 'normal',
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
@@ -523,191 +505,6 @@ function formatEntryDOM(entry) {
   return container;
 }
 
-function createDetailsSection(entry) {
-  const theme = getThemeColors();
-  // Create unique ID for this entry
-  const entryId = entry.id || `${entry.timestamp}-${entry.type || entry.method}`;
-  const isDebugExpanded = expandedDebugSections.has(entryId);
-  const savedScrollPos = entryScrollPositions.get(entryId) || 0;
-  
-  const details = document.createElement('div');
-  details.className = 'entry-details';
-  details.dataset.entryId = entryId;
-  Object.assign(details.style, {
-    marginTop: '8px',
-    padding: '12px',
-    background: theme.bgPrimary,
-    border: `1px solid ${theme.border}`,
-    borderRadius: '6px',
-    fontSize: '11px',
-    fontFamily: 'Consolas, Monaco, monospace',
-    wordBreak: 'break-word',
-    maxHeight: '300px',
-    overflowY: 'auto',
-    overflowX: 'hidden',
-    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.2)'
-  });
-  
-  // Restore scroll position after content is added
-  setTimeout(() => {
-    if (details && savedScrollPos > 0) {
-      details.scrollTop = savedScrollPos;
-    }
-  }, 0);
-
-  const lines = [];
-
-  if (entry.type) {
-    // Event details
-    lines.push(`<strong style="color: ${theme.accent}">📌 Event Type:</strong> ${entry.type}`);
-    if (entry.selector) {
-      lines.push(`<strong style="color: ${theme.accent}">🎯 Selector:</strong> ${entry.selector}`);
-    }
-    if (entry.target) {
-      lines.push(`<strong style="color: ${theme.accent}">🔍 Target:</strong> ${entry.target}`);
-    }
-    if (entry.text) {
-      lines.push(`<strong style="color: ${theme.accent}">📝 Text:</strong> ${entry.text}`);
-    }
-    if (entry.element) {
-      lines.push(`<strong style="color: ${theme.accent}">🏷️ Element:</strong> ${entry.element.tagName || 'N/A'}`);
-      if (entry.element.id) {
-        lines.push(`&nbsp;&nbsp;<span style="color: ${theme.textSecondary}">ID:</span> ${entry.element.id}`);
-      }
-      if (entry.element.className) {
-        lines.push(`&nbsp;&nbsp;<span style="color: ${theme.textSecondary}">Class:</span> ${entry.element.className}`);
-      }
-    }
-    if (entry.id) {
-      lines.push(`<strong style="color: ${theme.accent}">🆔 Event ID:</strong> ${entry.id}`);
-    }
-  } else {
-    // Request details
-    lines.push(`<strong style="color: ${theme.accent}">🔧 Method:</strong> ${entry.method}`);
-    lines.push(`<strong style="color: ${theme.accent}">🌐 Full URL:</strong>`);
-    lines.push(`<div style="word-break: break-all; padding-left: 10px; color: ${theme.textSecondary}">${entry.url}</div>`);
-    
-    if (entry.eventId) {
-      lines.push(`<strong style="color: ${theme.success}">⟷ Correlated Event ID:</strong> ${entry.eventId}`);
-    }
-    
-    if (entry.status !== undefined && entry.status !== 'message' && entry.status !== 'send') {
-      const statusColor = entry.status >= 200 && entry.status < 300 ? theme.success : theme.warning;
-      lines.push(`<strong style="color: ${theme.accent}">📊 Status:</strong> <span style="color: ${statusColor}">${entry.status}</span>`);
-    }
-    
-    if (entry.headers) {
-      lines.push(`<strong style="color: ${theme.accent}">📋 Headers:</strong>`);
-      try {
-        const headersObj = typeof entry.headers === 'string' ? JSON.parse(entry.headers) : entry.headers;
-        Object.entries(headersObj).forEach(([key, value]) => {
-          lines.push(`&nbsp;&nbsp;<em style="color: ${theme.textSecondary}">${key}:</em> ${value}`);
-        });
-      } catch {
-        lines.push(`&nbsp;&nbsp;${entry.headers}`);
-      }
-    }
-    
-    // Show request body if present (even if empty string, show it)
-    if (entry.body !== undefined && entry.body !== null) {
-      lines.push(`<strong style="color: ${theme.accent}">📤 Request Body:</strong>`);
-      if (entry.body === '' || entry.body === 'undefined' || entry.body === 'null') {
-        lines.push(`&nbsp;&nbsp;<em style="color: ${theme.textMuted}">(empty)</em>`);
-      } else {
-        try {
-          const bodyStr = typeof entry.body === 'string' ? entry.body : JSON.stringify(entry.body, null, 2);
-          lines.push(`<pre style="margin: 4px 0; padding: 8px; background: ${theme.bgSecondary}; border: 1px solid ${theme.border}; border-radius: 4px; overflow-x: auto; white-space: pre-wrap;">${bodyStr}</pre>`);
-        } catch {
-          lines.push(`&nbsp;&nbsp;<span style="color: ${theme.error}">[Unable to display]</span>`);
-        }
-      }
-    }
-    
-    // Show response if present (check multiple field names)
-    const responseData = entry.response || entry.responseData || entry.responseText;
-    if (responseData !== undefined && responseData !== null) {
-      lines.push(`<strong style="color: ${theme.accent}">📥 Response:</strong>`);
-      if (responseData === '' || responseData === 'undefined' || responseData === 'null') {
-        lines.push(`&nbsp;&nbsp;<em style="color: ${theme.textMuted}">(empty)</em>`);
-      } else {
-        try {
-          const resStr = typeof responseData === 'string' ? responseData : JSON.stringify(responseData, null, 2);
-          // Show more response data
-          const truncated = resStr.length > 1000 ? resStr.slice(0, 1000) + '\n... (truncated - ' + resStr.length + ' total chars)' : resStr;
-          lines.push(`<pre style="margin: 4px 0; padding: 8px; background: ${theme.bgSecondary}; border: 1px solid ${theme.border}; border-radius: 4px; overflow-x: auto; white-space: pre-wrap;">${truncated}</pre>`);
-        } catch {
-          lines.push(`&nbsp;&nbsp;<span style="color: ${theme.error}">[Unable to display]</span>`);
-        }
-      }
-    }
-    
-    if (entry.duration !== undefined && entry.duration > 0) {
-      lines.push(`<strong style="color: ${theme.accent}">⏱️ Duration:</strong> ${entry.duration.toFixed(2)}ms`);
-    }
-    
-    // Debug: Show ALL entry properties to help identify what's available
-    try {
-      const debugDetailsId = `debug-${entryId}`;
-      lines.push(`<details id="${debugDetailsId}" ${isDebugExpanded ? 'open' : ''} style="margin-top: 8px;"><summary style="cursor: pointer; color: ${theme.textSecondary};">🔍 Debug: All Entry Properties</summary>`);
-      // Create a safe copy without circular references
-      const safeEntry = {};
-      for (const key in entry) {
-        if (entry.hasOwnProperty(key)) {
-          try {
-            // Skip DOM elements and functions
-            if (entry[key] instanceof Element || typeof entry[key] === 'function') {
-              safeEntry[key] = `[${typeof entry[key]}]`;
-            } else {
-              safeEntry[key] = entry[key];
-            }
-          } catch {
-            safeEntry[key] = '[Unable to access]';
-          }
-        }
-      }
-      const debugStr = JSON.stringify(safeEntry, null, 2);
-      lines.push(`<pre style="margin: 4px 0; padding: 8px; background: ${theme.bgSecondary}; border: 1px solid ${theme.border}; border-radius: 4px; overflow-x: auto; font-size: 9px;">${debugStr}</pre>`);
-      lines.push(`</details>`);
-    } catch (e) {
-      lines.push(`<em style="color: ${theme.warning};">Debug info unavailable: ${e.message}</em>`);
-    }
-  }
-  
-  // Matched rules explanation
-  if (entry.rulesMatched?.length) {
-    lines.push(`<strong style="color: ${theme.warning}">📏 Matched Rules:</strong>`);
-    entry.rulesMatched.forEach(ruleName => {
-      lines.push(`&nbsp;&nbsp;<span style="color: ${theme.success}">✓</span> ${ruleName}`);
-    });
-  }
-  
-  lines.push(`<strong style="color: ${theme.accent}">🕐 Timestamp:</strong> <span style="color: ${theme.textSecondary}">${new Date(entry.timestamp).toISOString()}</span>`);
-  if (entry.id) {
-    lines.push(`<strong style="color: ${theme.accent}">🔑 Entry ID:</strong> <span style="color: ${theme.textSecondary}">${entry.id}</span>`);
-  }
-
-  details.innerHTML = lines.join('<br>');
-  
-  // Add event listener to track debug section toggle
-  const debugDetailsEl = details.querySelector(`#debug-${entryId}`);
-  if (debugDetailsEl) {
-    debugDetailsEl.addEventListener('toggle', () => {
-      if (debugDetailsEl.open) {
-        expandedDebugSections.add(entryId);
-      } else {
-        expandedDebugSections.delete(entryId);
-      }
-    });
-  }
-  
-  // Track scroll position changes
-  details.addEventListener('scroll', () => {
-    entryScrollPositions.set(entryId, details.scrollTop);
-  });
-  
-  return details;
-}
-
 function addControlButtons(container) {
   window.__telemetryStart = performance.now();
   const theme = getThemeColors();
@@ -768,10 +565,6 @@ function addControlButtons(container) {
   const clrBtn = createButton('Clear', 'Clear all logs', () => {
     eventsLog.length = 0;
     requestsLog.length = 0;
-    lastRenderedCount = 0;
-    expandedEntries.clear();
-    expandedDebugSections.clear();
-    entryScrollPositions.clear();
     renderLogs();
   });
   btns.appendChild(clrBtn);
@@ -1093,6 +886,40 @@ function renderInspectorContent() {
   });
   header.appendChild(title);
   
+  const buttonContainer = document.createElement('div');
+  Object.assign(buttonContainer.style, {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center'
+  });
+  
+  // Pop Out button
+  const popOutBtn = document.createElement('button');
+  popOutBtn.textContent = '⧉';
+  popOutBtn.title = 'Pop out to modal';
+  Object.assign(popOutBtn.style, {
+    background: 'transparent',
+    border: `1px solid ${theme.border}`,
+    color: theme.accent,
+    fontSize: '14px',
+    cursor: 'pointer',
+    padding: '4px 8px',
+    borderRadius: '4px',
+    lineHeight: '1',
+    transition: 'all 0.2s ease'
+  });
+  popOutBtn.onclick = () => createPopOutModal(selectedEntry, activeTab);
+  popOutBtn.onmouseenter = () => {
+    popOutBtn.style.background = theme.bgPrimary;
+    popOutBtn.style.borderColor = theme.accent;
+  };
+  popOutBtn.onmouseleave = () => {
+    popOutBtn.style.background = 'transparent';
+    popOutBtn.style.borderColor = theme.border;
+  };
+  buttonContainer.appendChild(popOutBtn);
+  
+  // Close button
   const closeBtn = document.createElement('button');
   closeBtn.textContent = '✕';
   closeBtn.title = 'Close inspector';
@@ -1108,7 +935,9 @@ function renderInspectorContent() {
   closeBtn.onclick = hideInspector;
   closeBtn.onmouseenter = () => closeBtn.style.color = theme.error;
   closeBtn.onmouseleave = () => closeBtn.style.color = theme.textSecondary;
-  header.appendChild(closeBtn);
+  buttonContainer.appendChild(closeBtn);
+  
+  header.appendChild(buttonContainer);
   
   inspectorPanel.appendChild(header);
   
@@ -1363,6 +1192,246 @@ function createTabContent(entry, tab, theme) {
   }
   
   return lines.join('');
+}
+
+function createPopOutModal(entry, initialTab = 'general') {
+  const theme = getThemeColors();
+  const modalId = modalIdCounter++;
+  
+  // Create modal container
+  const modal = document.createElement('div');
+  modal.id = `xhray-modal-${modalId}`;
+  Object.assign(modal.style, {
+    position: 'fixed',
+    width: '500px',
+    height: '600px',
+    top: `${100 + (poppedOutModals.length * 30)}px`, // Stagger modals
+    left: `${200 + (poppedOutModals.length * 30)}px`,
+    background: theme.bgPrimary,
+    border: `1px solid ${theme.border}`,
+    borderRadius: '8px',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+    zIndex: `${100000 + modalId}`,
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden'
+  });
+  
+  // Modal state
+  const modalState = {
+    id: modalId,
+    entry: entry,
+    element: modal,
+    activeTab: initialTab,
+    dragging: false,
+    offsetX: 0,
+    offsetY: 0
+  };
+  
+  // Modal header (draggable)
+  const modalHeader = document.createElement('div');
+  Object.assign(modalHeader.style, {
+    padding: '12px',
+    borderBottom: `1px solid ${theme.border}`,
+    background: theme.bgTertiary,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    cursor: 'move',
+    flexShrink: '0',
+    userSelect: 'none'
+  });
+  
+  const modalTitle = document.createElement('div');
+  const entryType = entry.method || entry.type || 'Entry';
+  const entryLabel = entry.url || entry.selector || 'Details';
+  modalTitle.textContent = `${entryType} - ${entryLabel.length > 40 ? entryLabel.substring(0, 40) + '...' : entryLabel}`;
+  Object.assign(modalTitle.style, {
+    fontWeight: '600',
+    fontSize: '11px',
+    color: theme.textPrimary,
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    flex: '1',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
+  });
+  modalHeader.appendChild(modalTitle);
+  
+  const modalCloseBtn = document.createElement('button');
+  modalCloseBtn.textContent = '✕';
+  modalCloseBtn.title = 'Close modal';
+  Object.assign(modalCloseBtn.style, {
+    background: 'transparent',
+    border: 'none',
+    color: theme.textSecondary,
+    fontSize: '16px',
+    cursor: 'pointer',
+    padding: '0 4px',
+    lineHeight: '1'
+  });
+  modalCloseBtn.onclick = () => closePopOutModal(modalId);
+  modalCloseBtn.onmouseenter = () => modalCloseBtn.style.color = theme.error;
+  modalCloseBtn.onmouseleave = () => modalCloseBtn.style.color = theme.textSecondary;
+  modalHeader.appendChild(modalCloseBtn);
+  
+  // Make header draggable
+  modalHeader.onmousedown = (e) => {
+    if (e.target === modalCloseBtn) return;
+    modalState.dragging = true;
+    modalState.offsetX = e.clientX - modal.offsetLeft;
+    modalState.offsetY = e.clientY - modal.offsetTop;
+    modal.style.zIndex = `${100000 + modalIdCounter}`; // Bring to front
+  };
+  
+  modal.appendChild(modalHeader);
+  
+  // Tab bar
+  const tabBar = document.createElement('div');
+  Object.assign(tabBar.style, {
+    display: 'flex',
+    borderBottom: `1px solid ${theme.border}`,
+    background: theme.bgSecondary,
+    flexShrink: '0'
+  });
+  
+  const tabs = [
+    { id: 'general', label: 'General' },
+    { id: 'headers', label: 'Headers' },
+    { id: 'request', label: 'Request' },
+    { id: 'response', label: 'Response' },
+    { id: 'debug', label: 'Debug' }
+  ];
+  
+  tabs.forEach(tab => {
+    const tabBtn = document.createElement('button');
+    tabBtn.textContent = tab.label;
+    const isActive = modalState.activeTab === tab.id;
+    
+    Object.assign(tabBtn.style, {
+      padding: '8px 16px',
+      background: isActive ? theme.bgPrimary : 'transparent',
+      color: isActive ? theme.accent : theme.textSecondary,
+      border: 'none',
+      borderBottom: isActive ? `2px solid ${theme.accent}` : '2px solid transparent',
+      cursor: 'pointer',
+      fontSize: '11px',
+      fontWeight: isActive ? '600' : '500',
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      transition: 'all 0.2s ease'
+    });
+    
+    tabBtn.onclick = () => {
+      modalState.activeTab = tab.id;
+      renderModalContent(modalState);
+    };
+    
+    tabBtn.onmouseenter = () => {
+      if (!isActive) {
+        tabBtn.style.background = theme.bgTertiary;
+        tabBtn.style.color = theme.textPrimary;
+      }
+    };
+    tabBtn.onmouseleave = () => {
+      if (!isActive) {
+        tabBtn.style.background = 'transparent';
+        tabBtn.style.color = theme.textSecondary;
+      }
+    };
+    
+    tabBar.appendChild(tabBtn);
+  });
+  
+  modal.appendChild(tabBar);
+  
+  // Tab content container
+  const tabContent = document.createElement('div');
+  tabContent.id = `modal-content-${modalId}`;
+  Object.assign(tabContent.style, {
+    padding: '12px',
+    overflowY: 'auto',
+    flex: '1',
+    fontFamily: 'Consolas, Monaco, monospace',
+    fontSize: '11px',
+    color: theme.textPrimary
+  });
+  modal.appendChild(tabContent);
+  
+  // Add to DOM and track
+  document.body.appendChild(modal);
+  poppedOutModals.push(modalState);
+  
+  // Render initial content
+  renderModalContent(modalState);
+  
+  // Global drag handlers for this modal
+  const onMouseMove = (e) => {
+    if (modalState.dragging) {
+      modal.style.left = `${e.clientX - modalState.offsetX}px`;
+      modal.style.top = `${e.clientY - modalState.offsetY}px`;
+    }
+  };
+  
+  const onMouseUp = () => {
+    modalState.dragging = false;
+  };
+  
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+  
+  // Store cleanup handlers on modal
+  modal._cleanup = () => {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  };
+}
+
+function renderModalContent(modalState) {
+  const theme = getThemeColors();
+  const contentDiv = document.getElementById(`modal-content-${modalState.id}`);
+  if (!contentDiv) return;
+  
+  const content = createTabContent(modalState.entry, modalState.activeTab, theme);
+  contentDiv.innerHTML = content;
+  
+  // Re-render tab buttons to update active state
+  const modal = modalState.element;
+  const tabBar = modal.children[1]; // Second child is tab bar
+  const tabs = [
+    { id: 'general', label: 'General' },
+    { id: 'headers', label: 'Headers' },
+    { id: 'request', label: 'Request' },
+    { id: 'response', label: 'Response' },
+    { id: 'debug', label: 'Debug' }
+  ];
+  
+  Array.from(tabBar.children).forEach((tabBtn, index) => {
+    const tab = tabs[index];
+    const isActive = modalState.activeTab === tab.id;
+    
+    tabBtn.style.background = isActive ? theme.bgPrimary : 'transparent';
+    tabBtn.style.color = isActive ? theme.accent : theme.textSecondary;
+    tabBtn.style.borderBottom = isActive ? `2px solid ${theme.accent}` : '2px solid transparent';
+    tabBtn.style.fontWeight = isActive ? '600' : '500';
+  });
+}
+
+function closePopOutModal(modalId) {
+  const index = poppedOutModals.findIndex(m => m.id === modalId);
+  if (index === -1) return;
+  
+  const modalState = poppedOutModals[index];
+  
+  // Cleanup event listeners
+  if (modalState.element._cleanup) {
+    modalState.element._cleanup();
+  }
+  
+  // Remove from DOM
+  modalState.element.remove();
+  
+  // Remove from tracking array
+  poppedOutModals.splice(index, 1);
 }
 
 function addResizeHandle() {
