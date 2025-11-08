@@ -1,0 +1,374 @@
+{
+  "presets": {
+    "react-mui": {
+      "name": "React Material-UI",
+      "description": "Rules for React applications using Material-UI (MUI) components",
+      "rules": [
+        {
+          "name": "MUI Button → API",
+          "selector": "button.MuiButton-root",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "MUI IconButton → API",
+          "selector": "button.MuiIconButton-root",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "MUI TextField Input",
+          "selector": "input.MuiInputBase-input",
+          "urlPattern": "/api/search|/api/autocomplete"
+        },
+        {
+          "name": "MUI Dialog Actions",
+          "selector": ".MuiDialog-root button",
+          "urlPattern": "/api/"
+        }
+      ]
+    },
+    "react-antd": {
+      "name": "React Ant Design",
+      "description": "Rules for React applications using Ant Design components",
+      "rules": [
+        {
+          "name": "Ant Design Button",
+          "selector": "button.ant-btn",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "Ant Design Form Submit",
+          "selector": ".ant-form button[type='submit']",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "Ant Design Table Actions",
+          "selector": ".ant-table-row button, .ant-table-row a",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "Ant Design Modal Actions",
+          "selector": ".ant-modal button.ant-btn-primary",
+          "urlPattern": "/api/"
+        }
+      ]
+    },
+    "vue-vuetify": {
+      "name": "Vue.js Vuetify",
+      "description": "Rules for Vue.js applications using Vuetify framework",
+      "rules": [
+        {
+          "name": "Vuetify Button Actions",
+          "selector": "button.v-btn",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "Vuetify Text Field Input",
+          "selector": ".v-text-field input",
+          "urlPattern": "/api/search|/api/validate"
+        },
+        {
+          "name": "Vuetify Dialog Actions",
+          "selector": ".v-dialog button.v-btn",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "Vuetify Data Table Actions",
+          "selector": ".v-data-table button",
+          "urlPattern": "/api/"
+        }
+      ]
+    },
+    "angular-material": {
+      "name": "Angular Material",
+      "description": "Rules for Angular applications using Material Design components",
+      "rules": [
+        {
+          "name": "Mat-Button Actions",
+          "selector": "button[mat-button], button[mat-raised-button], button[mat-flat-button]",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "Mat-Input Changes",
+          "selector": "input[matInput]",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "Mat-Dialog Actions",
+          "selector": "mat-dialog-actions button",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "Mat-Table Actions",
+          "selector": "mat-table button, mat-row button",
+          "urlPattern": "/api/"
+        }
+      ]
+    },
+    "bootstrap5": {
+      "name": "Bootstrap 5",
+      "description": "Rules for applications using Bootstrap 5 CSS framework",
+      "rules": [
+        {
+          "name": "Bootstrap Primary Buttons",
+          "selector": "button.btn-primary, a.btn-primary",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "Bootstrap Form Submit",
+          "selector": "form button[type='submit']",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "Bootstrap Modal Actions",
+          "selector": ".modal button.btn",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "Bootstrap Dropdown Actions",
+          "selector": ".dropdown-item",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "Bootstrap Card Actions",
+          "selector": ".card button, .card a.btn",
+          "urlPattern": "/api/"
+        }
+      ]
+    },
+    "shopify": {
+      "name": "Shopify Store",
+      "description": "Rules for Shopify e-commerce stores",
+      "rules": [
+        {
+          "name": "🛒 Add to Cart",
+          "selector": "button[name='add'], form[action='/cart/add'] button, .product-form__submit",
+          "urlPattern": "/cart/add\\.js|/cart/add"
+        },
+        {
+          "name": "🛒 Update Cart Quantity",
+          "selector": ".cart__qty-input, input[name='updates[]'], .quantity__input",
+          "urlPattern": "/cart/update\\.js|/cart/change\\.js"
+        },
+        {
+          "name": "🛒 Remove from Cart",
+          "selector": ".cart__remove, a[href*='cart/change'][href*='quantity=0']",
+          "urlPattern": "/cart/change\\.js.*quantity=0"
+        },
+        {
+          "name": "💳 Proceed to Checkout",
+          "selector": "button[name='checkout'], .cart__checkout-button",
+          "urlPattern": "/checkout|/cart/checkout"
+        },
+        {
+          "name": "🔍 Product Quick View",
+          "selector": ".quick-view-button, [data-action='quick-view']",
+          "urlPattern": "/products/.*\\.js"
+        }
+      ]
+    },
+    "woocommerce": {
+      "name": "WooCommerce",
+      "description": "Rules for WordPress WooCommerce stores",
+      "rules": [
+        {
+          "name": "🛒 WooCommerce Add to Cart",
+          "selector": ".single_add_to_cart_button, button.add_to_cart_button",
+          "urlPattern": "\\?add-to-cart=|wc-ajax=add_to_cart"
+        },
+        {
+          "name": "🛒 WooCommerce Update Cart",
+          "selector": "button[name='update_cart']",
+          "urlPattern": "/cart/\\?update_cart"
+        },
+        {
+          "name": "💳 WooCommerce Place Order",
+          "selector": "#place_order",
+          "urlPattern": "/checkout/.*wc-ajax=checkout"
+        },
+        {
+          "name": "🔍 WooCommerce Product Filter",
+          "selector": ".woocommerce-widget-layered-nav a, .woocommerce-ordering select",
+          "urlPattern": "wc-ajax=get_refreshed_fragments"
+        }
+      ]
+    },
+    "wordpress-admin": {
+      "name": "WordPress Admin",
+      "description": "Rules for WordPress admin dashboard",
+      "rules": [
+        {
+          "name": "📄 Publish/Update Post",
+          "selector": "#publish, #save-post",
+          "urlPattern": "/wp-admin/post\\.php|/wp-admin/admin-ajax\\.php.*action=heartbeat"
+        },
+        {
+          "name": "📷 Upload Media",
+          "selector": ".upload-button, #plupload-upload-ui button",
+          "urlPattern": "/wp-admin/async-upload\\.php"
+        },
+        {
+          "name": "💾 Auto-Save",
+          "selector": "",
+          "urlPattern": "/wp-admin/admin-ajax\\.php.*action=heartbeat.*wp_autosave"
+        },
+        {
+          "name": "🔌 Plugin Install",
+          "selector": ".install-now, a.button[data-slug]",
+          "urlPattern": "/wp-admin/update\\.php.*action=install-plugin"
+        },
+        {
+          "name": "💬 Quick Edit",
+          "selector": "button.save",
+          "urlPattern": "/wp-admin/admin-ajax\\.php.*action=inline-save"
+        }
+      ]
+    },
+    "github": {
+      "name": "GitHub",
+      "description": "Rules for GitHub.com interface",
+      "rules": [
+        {
+          "name": "💬 Create Issue",
+          "selector": "button[type='submit'][data-disable-with='Creating issue...']",
+          "urlPattern": "/.*/.*/issues$"
+        },
+        {
+          "name": "✅ Create Pull Request",
+          "selector": "button.js-pull-request-submit",
+          "urlPattern": "/.*/.*/pull/create"
+        },
+        {
+          "name": "💬 Comment on Issue/PR",
+          "selector": "button.js-comment-and-button",
+          "urlPattern": "/.*/.*/issues/.*/comments"
+        },
+        {
+          "name": "⭐ Star Repository",
+          "selector": "button.starred, button.js-toggler-target",
+          "urlPattern": "/.*/.*/star"
+        },
+        {
+          "name": "✏️ Edit File",
+          "selector": "button#commit-changes",
+          "urlPattern": "/.*/.*/edit/.*"
+        }
+      ]
+    },
+    "spa-generic": {
+      "name": "Generic Single Page Application",
+      "description": "General rules for any SPA framework",
+      "rules": [
+        {
+          "name": "SPA Navigation Links",
+          "selector": "a[href^='#'], a[href^='/']",
+          "urlPattern": "/api/"
+        },
+        {
+          "name": "SPA Load More / Infinite Scroll",
+          "selector": "button[class*='load-more'], button[class*='show-more']",
+          "urlPattern": "/api/.*\\?page=|/api/.*\\?offset="
+        },
+        {
+          "name": "SPA Search/Filter",
+          "selector": "input[type='search'], input[name*='search'], input[name*='filter']",
+          "urlPattern": "/api/search|/api/filter"
+        },
+        {
+          "name": "SPA CRUD Operations",
+          "selector": "[data-action='create'], [data-action='update'], [data-action='delete']",
+          "urlPattern": "/api/"
+        }
+      ]
+    },
+    "rest-api": {
+      "name": "RESTful API Monitoring",
+      "description": "Generic rules for REST API patterns",
+      "rules": [
+        {
+          "name": "GET Requests (List/Read)",
+          "selector": "button, a",
+          "urlPattern": "/api/[^/]+$|/api/[^/]+/\\d+$"
+        },
+        {
+          "name": "POST Requests (Create)",
+          "selector": "form button[type='submit'], button[class*='create'], button[class*='add']",
+          "urlPattern": "/api/[^/]+$"
+        },
+        {
+          "name": "PUT/PATCH Requests (Update)",
+          "selector": "button[class*='update'], button[class*='save'], button[class*='edit']",
+          "urlPattern": "/api/[^/]+/\\d+$"
+        },
+        {
+          "name": "DELETE Requests",
+          "selector": "button[class*='delete'], button[class*='remove']",
+          "urlPattern": "/api/[^/]+/\\d+$"
+        }
+      ]
+    },
+    "auth-standard": {
+      "name": "Authentication Flow",
+      "description": "Standard authentication patterns",
+      "rules": [
+        {
+          "name": "🔐 Login Form Submit",
+          "selector": "form[action*='login'] button[type='submit'], #login-form button[type='submit']",
+          "urlPattern": "/login|/auth/login|/api/authenticate"
+        },
+        {
+          "name": "📝 Registration Form",
+          "selector": "form[action*='register'] button[type='submit'], form[action*='signup'] button[type='submit']",
+          "urlPattern": "/register|/signup|/api/register"
+        },
+        {
+          "name": "🚪 Logout Action",
+          "selector": "a[href*='logout'], button[onclick*='logout']",
+          "urlPattern": "/logout|/api/logout|/auth/signout"
+        },
+        {
+          "name": "🔑 Password Reset Request",
+          "selector": "form[action*='forgot'] button[type='submit'], form[action*='reset'] button[type='submit']",
+          "urlPattern": "/forgot-password|/reset-password|/api/password/reset"
+        }
+      ]
+    },
+    "analytics-ga4": {
+      "name": "Google Analytics 4",
+      "description": "Track Google Analytics 4 events",
+      "rules": [
+        {
+          "name": "📊 GA4 Events",
+          "selector": "[data-gtm-click], [data-event]",
+          "urlPattern": "google-analytics\\.com/g/collect\\?.*&en="
+        }
+      ]
+    },
+    "chat-app": {
+      "name": "Chat Application",
+      "description": "Real-time chat application patterns",
+      "rules": [
+        {
+          "name": "💬 Send Message",
+          "selector": "button[data-action='send'], form[data-testid='message-form'] button[type='submit']",
+          "urlPattern": "/api/messages|/chat/send|wss?://.*/(chat|messages)"
+        },
+        {
+          "name": "📎 Upload File in Chat",
+          "selector": "button[aria-label*='Attach'], input[type='file'][accept*='image']",
+          "urlPattern": "/api/upload|/api/attachments"
+        },
+        {
+          "name": "✏️ Typing Indicator",
+          "selector": "textarea[data-testid='message-input'], input[placeholder*='message']",
+          "urlPattern": "wss?://.*/(typing|presence)"
+        }
+      ]
+    }
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "created": "2025-11-08",
+    "description": "XHRay Rule Preset Library - Import these presets directly into XHRay Rules Editor",
+    "usage": "Copy the 'rules' array from any preset and paste into XHRay Rules Editor"
+  }
+}

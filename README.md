@@ -98,7 +98,38 @@ You can then install that file directly into Tampermonkey.
 
 ---
 
-## 👨‍💻 Author Notes
+## � Documentation
+
+**Comprehensive documentation is available in the `/docs` folder:**
+
+- 📖 **[Getting Started Guide](docs/guide.md)** - Installation and basic usage
+- 📘 **[Rules System Documentation](docs/rules-system.md)** - Complete guide to correlation rules
+- 💡 **[Real-World Examples](docs/rules-examples.md)** - Working rules for popular frameworks
+- 🎯 **[Rules Quick Reference](docs/rules-quick-reference.md)** - Cheat sheet for rule creation
+- 📦 **[Changelog](docs/changelog.md)** - Version history
+
+### Quick Start: Rules System
+
+XHRay uses **correlation rules** to match DOM events with network requests. Rules are simple JSON objects:
+
+```json
+{
+  "name": "Submit Button → API Call",
+  "selector": "button.submit-btn",
+  "urlPattern": "/api/submit"
+}
+```
+
+**See the [Rules System Documentation](docs/rules-system.md)** for:
+- Complete syntax reference
+- Working examples for React, Vue, Angular, Bootstrap
+- E-commerce presets (Shopify, WooCommerce)
+- CMS patterns (WordPress, Ghost)
+- Social media, SaaS, and authentication flows
+
+---
+
+## �👨‍💻 Author Notes
 
 This structure is designed for **clarity, maintainability, and modular scale**. Every system is isolated for testing and expansion. Features like GraphQL inspection, timeline replay, or visual correlation views can be added with minimal friction.
 
