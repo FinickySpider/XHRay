@@ -4,11 +4,32 @@ import { renderLogs } from './overlay.js';
 
 export function renderRuleEditor(container) {
   const dark = !!GM_getValue("darkTheme", true);
+  let rulesExpanded = !!GM_getValue("rulesExpanded", false);
   
   const c = document.createElement('div');
   c.style.marginTop = '8px';
   c.style.borderTop = dark ? '1px solid rgba(0, 255, 0, 0.3)' : '1px solid rgba(34, 34, 34, 0.3)';
   c.style.paddingTop = '6px';
+
+  // Toggle button for collapsible rules
+  const toggleBtn = document.createElement('button');
+  toggleBtn.textContent = rulesExpanded ? '▼ Rules Editor' : '▶ Rules Editor';
+  Object.assign(toggleBtn.style, {
+    fontSize: '11px',
+    marginBottom: '6px',
+    background: dark ? '#222' : '#f0f0f0',
+    color: dark ? '#0f0' : '#222',
+    border: dark ? '1px solid #0f0' : '1px solid #888',
+    borderRadius: '3px',
+    padding: '4px 8px',
+    cursor: 'pointer',
+    width: '100%',
+    textAlign: 'left'
+  });
+
+  // Content container (collapsible)
+  const contentContainer = document.createElement('div');
+  contentContainer.style.display = rulesExpanded ? 'block' : 'none';
 
   const ta = document.createElement('textarea');
   Object.assign(ta.style, {
@@ -19,7 +40,8 @@ export function renderRuleEditor(container) {
     border: dark ? '1px solid #0f0' : '1px solid #888',
     fontFamily: 'monospace',
     fontSize: '11px',
-    padding: '4px'
+    padding: '4px',
+    boxSizing: 'border-box'
   });
   ta.value = JSON.stringify(rules, null, 2);
 
@@ -67,9 +89,20 @@ export function renderRuleEditor(container) {
     fb.textContent = 'ℹ️ Defaults restored';
   };
 
-  c.appendChild(ta);
-  c.appendChild(fb);
-  c.appendChild(save);
-  c.appendChild(reset);
+  contentContainer.appendChild(ta);
+  contentContainer.appendChild(fb);
+  contentContainer.appendChild(save);
+  contentContainer.appendChild(reset);
+
+  // Toggle button click handler
+  toggleBtn.onclick = () => {
+    rulesExpanded = !rulesExpanded;
+    GM_setValue("rulesExpanded", rulesExpanded);
+    contentContainer.style.display = rulesExpanded ? 'block' : 'none';
+    toggleBtn.textContent = rulesExpanded ? '▼ Rules Editor' : '▶ Rules Editor';
+  };
+
+  c.appendChild(toggleBtn);
+  c.appendChild(contentContainer);
   container.appendChild(c);
 }
