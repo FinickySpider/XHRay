@@ -497,13 +497,13 @@ toggleBtn.onclick = () => {
 
 ---
 
-### Sprint 2: UX Improvements (8 hours)
-- [ ] Feature #2: Collapsible rules box
-- [ ] Feature #4: Filter/search bar
-- [ ] Feature #6: Timestamp formatting
-- [ ] Feature #7: Resizable panel
+### ✅ Sprint 2: UX Improvements (8 hours) - COMPLETED
+- [x] Feature #2: Collapsible rules box
+- [x] Feature #4: Filter/search bar
+- [x] Feature #6: Timestamp formatting
+- [x] Feature #7: Resizable panel
 
-**Deliverable**: Enhanced usability and filtering.
+**Deliverable**: Enhanced usability and filtering. ✅ **DELIVERED**
 
 ---
 
