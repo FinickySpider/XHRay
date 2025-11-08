@@ -41,3 +41,31 @@ export function getLogState() {
     panelHidden: false // to be set dynamically
   };
 }
+
+export function getPanelState() {
+  const positionStr = GM_getValue('panelPosition');
+  const defaultPosition = { bottom: '10px', right: '10px' };
+  
+  try {
+    const position = positionStr ? JSON.parse(positionStr) : defaultPosition;
+    return {
+      position,
+      hidden: !!GM_getValue('panelHidden', false),
+      minimized: !!GM_getValue('panelMinimized', false)
+    };
+  } catch {
+    return { position: defaultPosition, hidden: false, minimized: false };
+  }
+}
+
+export function savePanelState(state) {
+  if (state.position) {
+    GM_setValue('panelPosition', JSON.stringify(state.position));
+  }
+  if (state.hidden !== undefined) {
+    GM_setValue('panelHidden', state.hidden);
+  }
+  if (state.minimized !== undefined) {
+    GM_setValue('panelMinimized', state.minimized);
+  }
+}
