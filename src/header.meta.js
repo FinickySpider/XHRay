@@ -10,3 +10,6 @@
 // @grant        GM_registerMenuCommand
 // @run-at       document-start
 // ==/UserScript==
+
+// This file contains the Tampermonkey metadata block. The actual script logic
+// is implemented in `main.js` which bootstraps the telemetry tooling.

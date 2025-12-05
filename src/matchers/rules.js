@@ -1,5 +1,8 @@
+// Array of user defined correlation rules. Each rule may define a CSS selector
+// and/or URL pattern to link DOM events with network requests.
 export let rules = [];
 
+// Fallback rules that are used when no custom rules have been saved
 const DEFAULT_RULES = [
   {
     name: 'Submit Button → Submit API',
@@ -9,8 +12,11 @@ const DEFAULT_RULES = [
   }
 ];
 
+// Match a DOM event entry against all rules and populate `rulesMatched`
 export function matchRulesForEvent(entry) {
   entry.rulesMatched = [];
+  // Iterate over all rules looking for selector matches
+  // Iterate over all rules looking for URL pattern matches
   rules.forEach(rule => {
     if (!rule.selector) return;
     let matched = false;
@@ -28,6 +34,7 @@ export function matchRulesForEvent(entry) {
   });
 }
 
+// Match a network request entry against all rules by URL pattern
 export function matchRulesForRequest(entry) {
   entry.rulesMatched = entry.rulesMatched || [];
   rules.forEach(rule => {
@@ -44,6 +51,7 @@ export function matchRulesForRequest(entry) {
   });
 }
 
+// Restore the hard-coded default rule set
 export function resetRulesToDefault() {
   rules = DEFAULT_RULES;
 }

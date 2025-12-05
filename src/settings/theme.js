@@ -1,4 +1,7 @@
+// Apply the light or dark theme styles to the panel and toggle button based on
+// the value stored in GM storage.
 export function applyTheme(panel, showBtn) {
+  // Determine the preferred theme; defaults to dark when unset
   const dark = !!GM_getValue("darkTheme", true);
   if (panel) {
     panel.style.background = dark ? "rgba(0,0,0,0.8)" : "#fff";

@@ -1,4 +1,5 @@
 #!/bin/bash
+# Generate a markdown summary of commits since the last tag
 
 VERSION=$(git describe --tags --abbrev=0)
 DATE=$(date +'%Y-%m-%d')
@@ -21,4 +22,4 @@ echo "$COMMITS" | grep -viE '^feat:|^fix:' || echo "- None" >> temp_release_note
 echo >> temp_release_notes.md
 
 cat temp_release_notes.md
-mv temp_release_notes.md release-notes.txt
+mv temp_release_notes.md release-notes.txt # final output written here
